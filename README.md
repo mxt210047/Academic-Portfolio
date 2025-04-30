@@ -1,57 +1,19 @@
-# Academic-Portfolio
- A curated collection of projects and assignments completed during my undergraduate studies in Information Technology &amp; Systems at UT Dallas.
+📊 ITSS 3300 – Information Technology for Business (UTD)
+This section showcases core assignments I completed as part of ITSS 3300 at The University of Texas at Dallas. Each assignment introduced foundational technologies used in business environments and provided hands-on experience applying them to real-world scenarios.
 
- 
-📁 Business Communications Portfolio
-✨ Overview
-This repository showcases selected projects, writing samples, and deliverables created for my Business Communications course at The University of Texas at Dallas. Each entry reflects growth in professional writing, presentation design, and strategic communication.
+📝 Assignment Descriptions:
+Excel Assignment
+Applied advanced spreadsheet functions, including pivot tables, conditional formatting, and financial modeling to analyze and visualize business data efficiently.
 
-🌐 Live Portfolio Website
-View the full portfolio here:
-👉 mayukhtatipamula.wixsite.com/my-site-1
+Tableau Assignment
+Built interactive dashboards and data visualizations to extract insights from complex datasets, emphasizing visual storytelling for business intelligence.
 
+SQL Assignment
+Developed and executed SQL queries to retrieve, filter, and organize data from relational databases, focusing on real-world database design and querying.
 
-📝 Included Projects
-Professional Email Sample – Demonstrates clarity and tone in workplace communication.
+Business Process Modeling (BPM) Assignment
+Used BPMN tools to map and optimize business processes, identifying inefficiencies and proposing improvements for workflow automation.
 
-Resume & Cover Letter – Formatted for applicant tracking systems (ATS) and tailored for job applications
-
-Group Proposal Presentation – Team collaboration project focused on persuasive communication
-
-Reflection Essays – Critical thinking pieces on communication strategies and growth
-
-📌 Course Info
-Course: Introduction to Professionalism and Communication in Business
-
-University: The University of Texas at Dallas
-
-Instructor: [Caryn Berardi]
-
-Semester: Spring 2025
-
-📁 Managing Communications in Business – Portfolio
-✨ Overview
-This repository highlights key assignments and deliverables completed for my Managing Communications in Business course at The University of Texas at Dallas. The work showcases my development in professional writing, presentation skills, and effective workplace communication strategies.
-
-🌐 Live Portfolio Website
-Check out the personal portfolio I created for this course:
-👉 https://xsperiencemiami.wixsite.com/mayukh-tatipamula
-
-
-📝 Included Projects
-Professional Email Communication – Sample demonstrating tone, clarity, and formatting
-
-Resume & Cover Letter – Refined for ATS readability and professional branding
-
-Team Proposal Presentation – Collaborative slide deck on communication and leadership at a company
-
-
-📌 Course Information
-Course Title: Managing Communications in Business
-
-University: The University of Texas at Dallas
-
-Instructor: [Melanie Hornsby]
-
-Semester: Fall 2025
+AWS Assignment
+Gained exposure to Amazon Web Services (AWS) and explored cloud computing fundamentals by deploying and managing basic cloud-based business applications.
 
