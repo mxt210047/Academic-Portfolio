@@ -1,57 +1,7 @@
-# Academic-Portfolio
- A curated collection of projects and assignments completed during my undergraduate studies in Information Technology &amp; Systems at UT Dallas.
-
- 
-📁 Business Communications Portfolio
+🎓 Undergraduate Portfolio – The University of Texas at Dallas
 ✨ Overview
-This repository showcases selected projects, writing samples, and deliverables created for my Business Communications course at The University of Texas at Dallas. Each entry reflects growth in professional writing, presentation design, and strategic communication.
+This repository is a comprehensive showcase of the academic projects, assignments, and deliverables I completed during my undergraduate studies in Information Technology & Systems at The University of Texas at Dallas.
 
-🌐 Live Portfolio Website
-View the full portfolio here:
-👉 mayukhtatipamula.wixsite.com/my-site-1
+Throughout my academic journey, I have developed a strong foundation in business technology by working on assignments involving data analytics, cloud computing, cybersecurity, business process modeling, and professional communication. These projects reflect technical skills and business acumen, highlighting my ability to analyze problems, communicate effectively, and deliver data-driven solutions.
 
-
-📝 Included Projects
-Professional Email Sample – Demonstrates clarity and tone in workplace communication.
-
-Resume & Cover Letter – Formatted for applicant tracking systems (ATS) and tailored for job applications
-
-Group Proposal Presentation – Team collaboration project focused on persuasive communication
-
-Reflection Essays – Critical thinking pieces on communication strategies and growth
-
-📌 Course Info
-Course: Introduction to Professionalism and Communication in Business
-
-University: The University of Texas at Dallas
-
-Instructor: [Caryn Berardi]
-
-Semester: Spring 2025
-
-📁 Managing Communications in Business – Portfolio
-✨ Overview
-This repository highlights key assignments and deliverables completed for my Managing Communications in Business course at The University of Texas at Dallas. The work showcases my development in professional writing, presentation skills, and effective workplace communication strategies.
-
-🌐 Live Portfolio Website
-Check out the personal portfolio I created for this course:
-👉 https://xsperiencemiami.wixsite.com/mayukh-tatipamula
-
-
-📝 Included Projects
-Professional Email Communication – Sample demonstrating tone, clarity, and formatting
-
-Resume & Cover Letter – Refined for ATS readability and professional branding
-
-Team Proposal Presentation – Collaborative slide deck on communication and leadership at a company
-
-
-📌 Course Information
-Course Title: Managing Communications in Business
-
-University: The University of Texas at Dallas
-
-Instructor: [Melanie Hornsby]
-
-Semester: Fall 2025
-
+This portfolio aims to demonstrate the practical application of classroom knowledge in real-world scenarios. It also highlights my technical and communication skillset across multiple disciplines, while tracking my growth as a student, collaborator, and future business technology professional.
