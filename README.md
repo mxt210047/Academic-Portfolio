@@ -25,7 +25,7 @@ Course: Introduction to Professionalism and Communication in Business
 
 University: The University of Texas at Dallas
 
-Instructor: [Caryn Berardi]
+Instructor: Caryn Berardi
 
 Semester: Spring 2025
 
@@ -51,7 +51,7 @@ Course Title: Managing Communications in Business
 
 University: The University of Texas at Dallas
 
-Instructor: [Melanie Hornsby]
+Instructor: Melanie Hornsby
 
-Semester: Fall 2025
+Semester: Fall 2024
 
