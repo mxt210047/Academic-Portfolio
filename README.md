@@ -8,7 +8,7 @@ This repository showcases selected projects, writing samples, and deliverables c
 
 🌐 Live Portfolio Website
 View the full portfolio here:
-👉 mayukhtatipamula.wixsite.com/my-site-1
+👉 https://mayukhtatipamula.wixsite.com/my-site-1
 
 
 📝 Included Projects
