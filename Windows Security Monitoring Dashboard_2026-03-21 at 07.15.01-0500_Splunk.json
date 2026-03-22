@@ -1,0 +1,261 @@
+{
+  "title": "Windows Security Monitoring Dashboard",
+  "description": "",
+  "inputs": {
+    "input_global_trp": {
+      "options": {
+        "defaultValue": "-24h@h,now",
+        "token": "global_time"
+      },
+      "title": "Global Time Range",
+      "type": "input.timerange"
+    }
+  },
+  "defaults": {
+    "dataSources": {
+      "ds.search": {
+        "options": {
+          "queryParameters": {
+            "earliest": "$global_time.earliest$",
+            "latest": "$global_time.latest$"
+          }
+        }
+      },
+      "ds.spl2": {
+        "options": {
+          "queryParameters": {
+            "earliest": "$global_time.earliest$",
+            "latest": "$global_time.latest$"
+          }
+        }
+      }
+    },
+    "visualizations": {
+      "global": {
+        "showProgressBar": true
+      }
+    }
+  },
+  "visualizations": {
+    "viz_0CJso2XK": {
+      "containerOptions": {},
+      "dataSources": {
+        "fieldsummary": "ds_1DUkavlb",
+        "primary": "ds_oiUaRPAY"
+      },
+      "eventHandlers": [
+        {
+          "options": {
+            "newTab": false,
+            "type": "auto"
+          },
+          "type": "drilldown.linkToSearch"
+        }
+      ],
+      "options": {
+        "additionalTooltipFields": [
+          "EventCode"
+        ],
+        "backgroundColor": "#000000",
+        "seriesColors": [
+          "#a8051b",
+          "#FF6ACE",
+          "#9D6300",
+          "#F6540B",
+          "#FF969E",
+          "#E47BFE",
+          "#7B56DB",
+          "#009CEB"
+        ],
+        "y": "> primary | frameBySeriesNames('Message','_bkt','_cd','_indextime','_pre_msg','_raw','_serial','_si','_sourcetype','_subsecond','_time','host','index','linecount','source','sourcetype','splunk_server','EventCode')"
+      },
+      "showLastUpdated": false,
+      "showProgressBar": true,
+      "title": "Failed Login attempts",
+      "type": "splunk.bar"
+    },
+    "viz_oW3XelpX": {
+      "containerOptions": {},
+      "dataSources": {
+        "fieldsummary": "ds_SKPWGLgL",
+        "primary": "ds_fdhS0Ahp"
+      },
+      "eventHandlers": [
+        {
+          "options": {
+            "newTab": false,
+            "type": "auto"
+          },
+          "type": "drilldown.linkToSearch"
+        }
+      ],
+      "options": {
+        "additionalTooltipFields": [
+          "_indextime"
+        ],
+        "dataValuesDisplay": "all",
+        "resultLimit": 5,
+        "seriesColors": [
+          "#FFA476",
+          "#FF6ACE",
+          "#AE8CFF",
+          "#00689D",
+          "#00490A",
+          "#465D00",
+          "#9D6300",
+          "#F6540B",
+          "#FF969E",
+          "#E47BFE"
+        ],
+        "y": "> primary | frameBySeriesNames('EventCode','Message','_bkt','_cd','_indextime','_pre_msg','_raw','_serial','_si','_sourcetype','_subsecond','_time','host','index','linecount','source','sourcetype','splunk_server')",
+        "y2": "> primary | frameBySeriesNames('_indextime')"
+      },
+      "showLastUpdated": false,
+      "showProgressBar": true,
+      "type": "splunk.bar"
+    },
+    "viz_qnMDqC0X": {
+      "options": {
+        "markdown": ""
+      },
+      "type": "splunk.markdown"
+    },
+    "viz_ysYUWP6L": {
+      "options": {
+        "preserveAspectRatio": true
+      },
+      "type": "splunk.image"
+    }
+  },
+  "dataSources": {
+    "ds_1DUkavlb": {
+      "name": "Events 2 search",
+      "options": {
+        "extend": "ds_oiUaRPAY",
+        "query": "| fieldsummary maxvals=10"
+      },
+      "type": "ds.chain"
+    },
+    "ds_SKPWGLgL": {
+      "name": "Events 6 search",
+      "options": {
+        "extend": "ds_fdhS0Ahp",
+        "query": "| fieldsummary maxvals=10"
+      },
+      "type": "ds.chain"
+    },
+    "ds_fdhS0Ahp": {
+      "name": "Events 5 search",
+      "options": {
+        "query": "index=* EventCode = 4624",
+        "queryParameters": {
+          "earliest": "-24h@h",
+          "latest": "now",
+          "sampleRatio": 1
+        }
+      },
+      "type": "ds.search"
+    },
+    "ds_iyESCQX2": {
+      "name": "Events 3 search",
+      "options": {
+        "query": "index=* EventCode = 4624",
+        "queryParameters": {
+          "earliest": "-24h@h",
+          "latest": "now",
+          "sampleRatio": 1
+        }
+      },
+      "type": "ds.search"
+    },
+    "ds_niry1nmZ": {
+      "name": "Events 4 search",
+      "options": {
+        "extend": "ds_iyESCQX2",
+        "query": "| fieldsummary maxvals=10"
+      },
+      "type": "ds.chain"
+    },
+    "ds_oiUaRPAY": {
+      "name": "Events 1 search",
+      "options": {
+        "query": "index=* EventCode=4625  Account_Name=vboxuser",
+        "queryParameters": {
+          "earliest": "-24h@h",
+          "latest": "now",
+          "sampleRatio": 1
+        }
+      },
+      "type": "ds.search"
+    }
+  },
+  "layout": {
+    "globalInputs": [
+      "input_global_trp"
+    ],
+    "layoutDefinitions": {
+      "layout_1": {
+        "options": {
+          "height": 1175,
+          "width": 1440
+        },
+        "structure": [
+          {
+            "item": "viz_0CJso2XK",
+            "position": {
+              "h": 840,
+              "w": 1440,
+              "x": -10,
+              "y": 30
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_oW3XelpX",
+            "position": {
+              "h": 930,
+              "w": 1442,
+              "x": 0,
+              "y": 870
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_ysYUWP6L",
+            "position": {
+              "h": 300,
+              "w": 300,
+              "x": 480,
+              "y": 392
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_qnMDqC0X",
+            "position": {
+              "h": 300,
+              "w": 300,
+              "x": 480,
+              "y": 392
+            },
+            "type": "block"
+          }
+        ],
+        "type": "absolute"
+      }
+    },
+    "options": {},
+    "tabs": {
+      "items": [
+        {
+          "label": "Authentication Overview",
+          "layoutId": "layout_1"
+        }
+      ]
+    }
+  },
+  "applicationProperties": {
+    "hideEdit": false,
+    "hideExport": false
+  }
+}
