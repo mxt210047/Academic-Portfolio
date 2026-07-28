@@ -5,3 +5,7 @@ This repository is a comprehensive showcase of the academic projects, assignment
 Throughout my academic journey, I have developed a strong foundation in business technology by working on assignments involving data analytics, cloud computing, cybersecurity, business process modeling, and professional communication. These projects reflect technical skills and business acumen, highlighting my ability to analyze problems, communicate effectively, and deliver data-driven solutions.
 
 This portfolio aims to demonstrate the practical application of classroom knowledge in real-world scenarios. It also highlights my technical and communication skillset across multiple disciplines, while tracking my growth as a student, collaborator, and future business technology professional.
+
+## Featured packages
+
+- **[I-9 Audit](./I-9-Audit/)** — Internal Form I-9 compliance audit kit (plan, checklist, findings tracker, correction guide).
