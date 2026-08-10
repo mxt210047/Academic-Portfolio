@@ -25,7 +25,7 @@ Internal employment-eligibility verification audit package for reviewing Forms I
 
 ## Status
 
-**Audit status:** In progress — kit initialized; form review not yet started (no employee Forms I-9 loaded in this repository).
+**Audit status:** In progress — I-9 assist audit agent open; EXAMPLE-001 dry-run completed; no real employee Forms I-9 loaded in this repository.
 
 ## References
 
