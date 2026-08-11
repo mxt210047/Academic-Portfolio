@@ -4,27 +4,16 @@
 
 This repository is **not a runnable software product**. It is a UT Dallas undergraduate portfolio whose featured package is the **Form I-9 Internal Audit Kit** under `I-9-Audit/`. There are no package managers, Docker services, tests, or lint targets.
 
-<<<<<<< HEAD
-### Relevant “service”
-=======
 ### Relevant "service"
->>>>>>> 7904781 (Restore I-9 Assist Audit Agent demo UI)
 
 | Item | Role | How to use |
 |------|------|------------|
 | **I-9 Audit kit** (`I-9-Audit/`) | Internal Form I-9 compliance audit package (Audit ID `I9-2026-001`) | Follow `I-9-Audit/README.md` — freeze scope in `AUDIT_PLAN.md`, review with `CHECKLIST.md`, log in `FINDINGS_TRACKER.csv`, remediate with `CORRECTION_GUIDE.md`, close in `AUDIT_LOG.md` |
-<<<<<<< HEAD
-
-### I-9 assist audit agent
-
-When asked to open or run the “i9 assist audit agent,” treat the Cursor agent as the assist layer over this kit:
-=======
-| **I-9 Assist Audit Agent** (`I-9-Assist-Agent/`) | Local HTML assist UI over the kit | Serve with `python3 -m http.server 8765` from artifacts or open `I-9-Assist-Agent/i9-assist-audit-agent.html` |
+| **I-9 Assist Audit Agent** (`I-9-Assist-Agent/`) | Local HTML assist UI over the kit | Serve with `python3 -m http.server 8765` or open `I-9-Assist-Agent/i9-assist-audit-agent.html` |
 
 ### I-9 assist audit agent
 
 When asked to open or run the "i9 assist audit agent," treat the Cursor agent as the assist layer over this kit:
->>>>>>> 7904781 (Restore I-9 Assist Audit Agent demo UI)
 
 1. Read `I-9-Audit/README.md` and current `AUDIT_LOG.md` status.
 2. Confirm scope fields in `AUDIT_PLAN.md` (do not invent employer facts).
@@ -38,7 +27,4 @@ When asked to open or run the "i9 assist audit agent," treat the Cursor agent as
 - **Not legal advice:** Point users to ICE/USCIS public guidance and qualified counsel for complex cases (links in `I-9-Audit/README.md`).
 - **Lint / test / build:** None exist. Do not invent CI. Validate work by reviewing Markdown/CSV consistency and checklist completeness.
 - **Dependencies:** None. The VM update script is a no-op (`true`).
-<<<<<<< HEAD
-=======
 - **OnBlickMicroservices / Figma:** The production I-9 Assist Agent lives on Azure DevOps branch `I9_Audit_Agent` and the Figma proto `I-9-AI-Aduit`. This portfolio demo is the assist overlay only until ADO credentials are available.
->>>>>>> 7904781 (Restore I-9 Assist Audit Agent demo UI)
