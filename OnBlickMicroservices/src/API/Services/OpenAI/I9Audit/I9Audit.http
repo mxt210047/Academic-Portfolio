@@ -1,0 +1,6 @@
+@I9Audit_HostAddress = http://localhost:5208
+
+GET {{I9Audit_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
