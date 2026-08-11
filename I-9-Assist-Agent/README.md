@@ -7,9 +7,25 @@ Local assist UI for Audit ID **I9-2026-001**, correlated with:
 
 ## Open locally
 
+From repo root (preferred):
+
+```bash
+./START-I9-AUDIT.sh
+```
+
+Or:
+
 ```bash
 cd I-9-Assist-Agent
 python3 -m http.server 8765
 ```
 
 Then open: http://127.0.0.1:8765/i9-assist-audit-agent.html
+
+## Windows / OnBlick production launcher
+
+`START-I9-AUDIT.bat` at the repo root delegates to:
+
+`OnBlickMicroservices\src\API\Services\OpenAI\I9Audit\START.bat`
+
+That path comes from Azure DevOps branch `I9_Audit_Agent`. Clone that repo beside this kit, then run the `.bat` on Windows.
