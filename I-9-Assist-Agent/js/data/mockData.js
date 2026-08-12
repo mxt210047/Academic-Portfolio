@@ -44,12 +44,14 @@ export function createEmptyAudits() {
 export function buildAuditFromFolder(folder, orgName) {
   const now = new Date();
   return {
-    id: `audit-${Date.now()}`,
+    id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     name: orgName,
     folderId: folder.id,
     folderName: folder.name,
     employees: folder.employeeCount,
     documents: folder.documentCount,
+    source: folder.source || "upload",
+    fileNames: folder.fileNames || [],
     status: "Not Initiated", // Not Initiated | In Progress | Completed
     initiatedAt: null,
     initiatedBy: null,

@@ -7,7 +7,6 @@ import { renderAuditDetail } from "./ui/auditDetail.js";
 import { renderAssistView } from "./ui/assistView.js";
 import { renderToasts } from "./ui/toast.js";
 import {
-  availableFolders,
   currentUser,
   getSelectedEmployee,
   getState,
@@ -18,6 +17,7 @@ import {
 } from "./state/store.js";
 import { buildAuditFromFolder } from "./data/mockData.js";
 import { runAgentTurn, startCorrectionRecommendation } from "./services/aiAgent.js";
+import { packagesFromFiles } from "./services/fileImport.js";
 
 const headerRoot = document.getElementById("header-root");
 const appRoot = document.getElementById("app");
@@ -29,7 +29,6 @@ renderHeader(headerRoot);
 function openImport() {
   setState({
     showImport: true,
-    // Keep blank — do not inject sample org/folder data on open
     orgNameDraft: getState().orgNameDraft || "",
     selectedFolders: getState().selectedFolders || [],
   });
@@ -39,15 +38,31 @@ function closeImport() {
   setState({ showImport: false });
 }
 
-function addFolder(folderId) {
-  const folder = availableFolders.find((f) => f.id === folderId);
-  if (!folder) return;
-  const selected = getState().selectedFolders;
-  if (selected.some((f) => f.id === folder.id)) {
-    toast("Folder already selected", "warn");
-    return;
+function addImportedFiles(fileList) {
+  const { packages, errors } = packagesFromFiles(fileList);
+  errors.forEach((msg) => toast(msg, "warn"));
+  if (!packages.length) return;
+
+  const selected = [...getState().selectedFolders];
+  for (const pkg of packages) {
+    const existing = selected.findIndex((f) => f.name === pkg.name && f.source === "upload");
+    if (existing >= 0) {
+      selected[existing] = {
+        ...selected[existing],
+        ...pkg,
+        id: selected[existing].id,
+      };
+    } else {
+      selected.push(pkg);
+    }
   }
-  setState({ selectedFolders: [...selected, folder] });
+  setState({ selectedFolders: selected });
+  toast(
+    packages.length === 1
+      ? `Imported “${packages[0].name}” (${packages[0].documentCount} docs)`
+      : `Imported ${packages.length} packets`,
+    "success"
+  );
 }
 
 function removeFolder(index) {
@@ -63,7 +78,7 @@ function validateImport() {
     return false;
   }
   if (!selectedFolders.length) {
-    toast("Select at least one folder", "error");
+    toast("Choose files or a folder to import", "error");
     return false;
   }
   return true;
@@ -318,7 +333,7 @@ function render() {
       renderImportModal({
         onClose: closeImport,
         onOrgChange: (v) => setState({ orgNameDraft: v }),
-        onAddFolder: addFolder,
+        onFilesSelected: addImportedFiles,
         onRemoveFolder: removeFolder,
         onSaveLater: saveLater,
         onInitiate: initiateFromImport,

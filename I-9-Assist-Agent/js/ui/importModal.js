@@ -1,15 +1,17 @@
 import { el } from "../utils/dom.js";
 import { getState } from "../state/store.js";
+import { formatBytes } from "../services/fileImport.js";
 
 export function renderImportModal({
   onClose,
   onOrgChange,
-  onAddFolder,
+  onFilesSelected,
   onRemoveFolder,
   onSaveLater,
   onInitiate,
 }) {
   const state = getState();
+  const canSubmit = Boolean(state.selectedFolders.length && state.orgNameDraft.trim());
   const root = el(`
   <div class="overlay" data-overlay="import">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
@@ -24,10 +26,16 @@ export function renderImportModal({
       </div>
       <div class="field">
         <label>Upload I-9 Document</label>
-        <div class="drop" data-drop>
+        <input type="file" id="file-input" class="hidden" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,image/*" />
+        <input type="file" id="folder-input" class="hidden" webkitdirectory directory multiple />
+        <div class="drop" data-drop tabindex="0" role="button" aria-label="Upload I-9 documents">
           <div style="font-size:28px;color:var(--blue)">📄</div>
           <div><strong data-link>Link</strong> or drag and drop</div>
           <div class="hint">PDF, DOC, JPG or PNG (max. 25MB)</div>
+          <div class="hint" style="margin-top:10px">
+            <button type="button" class="chip-btn" data-pick-files>Choose files</button>
+            <button type="button" class="chip-btn" data-pick-folder>Choose folder</button>
+          </div>
         </div>
         <p class="note">Note: Please organize the folders by employee names within a master folder and upload the master folder here.</p>
       </div>
@@ -39,7 +47,13 @@ export function renderImportModal({
                 .map(
                   (f, i) => `
             <div class="folder-row">
-              <span>📁</span><span>${escapeHtml(f.name)}</span>
+              <span>📁</span>
+              <span style="flex:1;min-width:0">
+                <div>${escapeHtml(f.name)}</div>
+                <div class="note">${f.documentCount} document${f.documentCount === 1 ? "" : "s"} · ${f.employeeCount} employee${f.employeeCount === 1 ? "" : "s"}${
+                    f.totalBytes != null ? ` · ${formatBytes(f.totalBytes)}` : ""
+                  }</div>
+              </span>
               <button class="trash" type="button" data-remove="${i}" aria-label="Remove">🗑</button>
             </div>`
                 )
@@ -48,23 +62,59 @@ export function renderImportModal({
         }
       </div>
       <div class="modal-actions">
-        <button class="btn btn-outline" type="button" data-save>SAVE &amp; AUDIT LATER</button>
-        <button class="btn btn-primary" type="button" data-initiate>INITIATE AUDIT</button>
+        <button class="btn btn-outline" type="button" data-save ${canSubmit ? "" : "disabled"}>SAVE &amp; AUDIT LATER</button>
+        <button class="btn btn-primary" type="button" data-initiate ${canSubmit ? "" : "disabled"}>INITIATE AUDIT</button>
       </div>
     </div>
   </div>`);
+
+  const fileInput = root.querySelector("#file-input");
+  const folderInput = root.querySelector("#folder-input");
+  const drop = root.querySelector("[data-drop]");
+
+  const handleList = (list) => {
+    if (!list?.length) return;
+    onFilesSelected(list);
+  };
 
   root.addEventListener("click", (e) => {
     if (e.target === root) onClose();
   });
   root.querySelector("[data-close]").addEventListener("click", onClose);
   root.querySelector("#org-name").addEventListener("input", (e) => onOrgChange(e.target.value));
-  // Dropzone / link stay empty until the user explicitly chooses a folder chip
-  root.querySelector("[data-drop]").addEventListener("click", () => {});
+
+  root.querySelector("[data-pick-files]").addEventListener("click", (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+  root.querySelector("[data-pick-folder]").addEventListener("click", (e) => {
+    e.stopPropagation();
+    folderInput.click();
+  });
   root.querySelector("[data-link]").addEventListener("click", (e) => {
     e.stopPropagation();
+    folderInput.click();
   });
-  const drop = root.querySelector("[data-drop]");
+  drop.addEventListener("click", (e) => {
+    if (e.target.closest("button") || e.target.closest("[data-link]")) return;
+    folderInput.click();
+  });
+  drop.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      folderInput.click();
+    }
+  });
+
+  fileInput.addEventListener("change", () => {
+    handleList(fileInput.files);
+    fileInput.value = "";
+  });
+  folderInput.addEventListener("change", () => {
+    handleList(folderInput.files);
+    folderInput.value = "";
+  });
+
   drop.addEventListener("dragover", (e) => {
     e.preventDefault();
     drop.classList.add("dragover");
@@ -73,7 +123,9 @@ export function renderImportModal({
   drop.addEventListener("drop", (e) => {
     e.preventDefault();
     drop.classList.remove("dragover");
+    handleList(e.dataTransfer.files);
   });
+
   root.querySelectorAll("[data-remove]").forEach((b) =>
     b.addEventListener("click", () => onRemoveFolder(+b.getAttribute("data-remove")))
   );
