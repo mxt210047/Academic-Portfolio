@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+I9_Audit_Agent_Mayukh.zip
