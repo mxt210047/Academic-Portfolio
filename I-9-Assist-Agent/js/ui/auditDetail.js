@@ -41,7 +41,7 @@ export function renderAuditDetail({
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary btn-sm" type="button" data-analytics>📊 VIEW ANALYTICS</button>
-        <button class="chip-btn" type="button">⋮</button>
+        <button class="chip-btn" type="button" data-menu title="More actions">⋮</button>
       </div>
     </div>
     ${
@@ -125,11 +125,23 @@ export function renderAuditDetail({
   root.querySelector("[data-analytics]")?.addEventListener("click", () => {
     const completed = rows.filter((r) => r.analysisStatus === "completed");
     const withErrors = completed.filter((r) => r.errors > 0).length;
+    const totalFindings = rows.reduce((n, r) => n + (Number(r.errors) || 0), 0);
     alert(
       `Analytics snapshot\n\nEmployees in view: ${rows.length}\nAnalyzed: ${completed.length}\nWith errors: ${withErrors}\nClean: ${
         completed.length - withErrors
-      }\nAudit status: ${audit?.status || "—"}`
+      }\nTotal findings: ${totalFindings}\nAudit status: ${audit?.status || "—"}`
     );
+  });
+  root.querySelector("[data-menu]")?.addEventListener("click", () => {
+    const lines = [
+      `Audit: ${audit?.name || "—"}`,
+      `Id: ${audit?.id || "—"}`,
+      `Status: ${audit?.status || "—"}`,
+      `Employees: ${audit?.employees ?? rows.length}`,
+      `Documents: ${audit?.documents ?? "—"}`,
+      `Initiated by: ${audit?.initiatedBy || "—"}`,
+    ].join("\n");
+    alert(`Audit actions\n\n${lines}`);
   });
   return root;
 }

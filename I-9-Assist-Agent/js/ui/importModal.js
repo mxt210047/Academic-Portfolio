@@ -37,7 +37,7 @@ export function renderImportModal({
             <button type="button" class="chip-btn" data-pick-folder>Choose folder</button>
           </div>
         </div>
-        <p class="note">Imported files become the live data in mockData.js (no seeded packets).</p>
+        <p class="note">Note: Please organize the folders by employee names within a master folder and upload the master folder here.</p>
       </div>
       <div class="selected">
         <h4>Selected Folders</h4>

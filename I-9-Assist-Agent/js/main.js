@@ -243,7 +243,13 @@ function openEmployee(employeeId) {
 }
 
 function selectAnalysisDocument(documentId) {
-  setState({ selectedDocumentId: documentId });
+  // Switching documents clears chat so Document A recommendations cannot linger on B
+  resetChat();
+  setState({
+    selectedDocumentId: documentId,
+    findingOverrides: {},
+    pendingRecommendation: null,
+  });
 }
 
 function openDocument(documentId, employeeId = null) {
@@ -257,10 +263,11 @@ function openDocument(documentId, employeeId = null) {
 }
 
 function closeDocument() {
-  const { documentReturnView } = getState();
+  const { documentReturnView, selectedDocumentId } = getState();
+  // Preserve selectedDocumentId when returning to Document Analysis so viewer stays in sync
   setState({
     view: documentReturnView || "audit",
-    selectedDocumentId: null,
+    selectedDocumentId: documentReturnView === "assist" ? selectedDocumentId : null,
   });
 }
 
@@ -284,8 +291,9 @@ function pushMessages(...msgs) {
 async function handleStartCorrection() {
   const employee = getSelectedEmployee();
   if (!employee) return;
+  const { findingOverrides, selectedDocumentId } = getState();
   const result = await withAgentStatus((onStatus) =>
-    startCorrectionRecommendation(employee, getState().findingOverrides, onStatus)
+    startCorrectionRecommendation(employee, findingOverrides, onStatus, selectedDocumentId)
   );
   pushMessages({
     role: "bot",
@@ -306,11 +314,13 @@ async function handleSend(raw) {
 
   pushMessages({ role: "user", text, html: escapeHtml(text) });
   // clear input via re-render
+  const { findingOverrides, selectedDocumentId } = getState();
   const result = await withAgentStatus((onStatus) =>
     runAgentTurn({
       userText: text,
       employee,
-      findingOverrides: getState().findingOverrides,
+      findingOverrides,
+      documentId: selectedDocumentId,
       onStatus,
     })
   );

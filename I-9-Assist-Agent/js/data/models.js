@@ -11,8 +11,10 @@ export function emptyFindings() {
   return {
     purpose: "Form I-9 corrections",
     reviewedBy: "—",
+    all: [],
     section1: [],
     section2: [],
+    documentReview: [],
     recommendation:
       "Analysis has not run yet for this employee. Initiate the audit to analyze the imported Form I-9 packet.",
   };

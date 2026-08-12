@@ -99,20 +99,41 @@ export function renderAssistView({
             : "No findings in this section yet."
         }</td></tr>`;
 
-  const remediationItems = docFindings.length
-    ? docFindings
-        .map(
-          (f) =>
-            `<li><strong>${escapeHtml(f.title)}</strong> (${escapeHtml(f.section)} · ${escapeHtml(
-              f.severity || f.class
-            )}): ${escapeHtml(f.detail)}</li>`
-        )
-        .join("")
-    : `<li>${
-        emp.analysisStatus === "completed"
-          ? "No open remediation items for this document."
-          : "Initiate and complete analysis to populate remediation items."
-      }</li>`;
+  /** Figma-style recommendation box under each section — content from live findings only */
+  const sectionRecBox = (sectionFindings, sectionLabel) => {
+    if (!sectionFindings.length) {
+      return `
+          <div class="rec-box">
+            <div class="warn">${
+              emp.analysisStatus === "completed"
+                ? `No open remediation items for ${escapeHtml(sectionLabel)} on this document.`
+                : `Complete analysis to populate ${escapeHtml(sectionLabel)} remediation.`
+            }</div>
+            <ul><li>Retain Form I-9 records per policy.</li></ul>
+          </div>`;
+    }
+    const who =
+      sectionLabel === "Section 1"
+        ? "Only the employee is required to make the necessary corrections on Section 1 of the I-9."
+        : sectionLabel === "Section 2"
+          ? "Only the employer or authorized representative should correct Section 2 of the I-9."
+          : `Address the ${sectionFindings.length} finding(s) listed for ${sectionLabel}.`;
+    const items = sectionFindings
+      .map(
+        (f) =>
+          `<li><strong>${escapeHtml(f.title)}</strong>${
+            f.recommendation
+              ? `: ${escapeHtml(f.recommendation)}`
+              : `: ${escapeHtml(f.detail)}`
+          }</li>`
+      )
+      .join("");
+    return `
+          <div class="rec-box">
+            <div class="warn">${escapeHtml(who)}</div>
+            <ul>${items}</ul>
+          </div>`;
+  };
 
   const root = el(`
   <section data-employee-id="${escapeAttr(emp.id)}" data-audit-id="${escapeAttr(audit?.id || "")}" data-document-id="${escapeAttr(
@@ -136,7 +157,7 @@ export function renderAssistView({
         </div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="chip-btn" type="button" title="Share">↗</button>
+        <button class="chip-btn" type="button" data-share title="Share">↗</button>
         <button class="btn btn-primary btn-sm" type="button" data-download>DOWNLOAD</button>
       </div>
     </div>
@@ -151,19 +172,31 @@ export function renderAssistView({
           )}</span></div>
           <table class="info-table">
             <tr><td>Employee Name</td><td>${escapeHtml(emp.name)}</td></tr>
-            <tr><td>Employee ID</td><td>${escapeHtml(emp.id)}</td></tr>
-            <tr><td>Audit ID</td><td>${escapeHtml(pack.auditId || audit?.id || "—")}</td></tr>
-            <tr><td>Document</td><td>${escapeHtml(selectedDoc?.name || "—")}</td></tr>
-            <tr><td>Document ID</td><td>${escapeHtml(selectedDocId || "—")}</td></tr>
-            <tr><td>Organization</td><td>${escapeHtml(audit?.name || "—")}</td></tr>
-            <tr><td>Findings on this document</td><td><strong>${
-              emp.analysisStatus === "completed" ? docFindingCount : "—"
-            }</strong></td></tr>
+            <tr><td>Purpose</td><td>${escapeHtml(pack.purpose || "Form I-9 corrections")}</td></tr>
+            <tr><td>Department</td><td>${escapeHtml(
+              emp.department || (audit?.name ? `${audit.name} (Form I-9 Review)` : "—")
+            )}</td></tr>
             <tr><td>Reviewed By</td><td>${escapeHtml(pack.reviewedBy || "—")}</td></tr>
           </table>
+          <table class="info-table analysis-doc-meta">
+            <tr><td>Organization</td><td>${escapeHtml(audit?.name || "—")}</td></tr>
+            <tr><td>Document under analysis</td><td>${escapeHtml(selectedDoc?.name || "—")}</td></tr>
+            <tr><td>Document ID</td><td>${escapeHtml(selectedDocId || "—")}</td></tr>
+            <tr><td>Findings on this document</td><td><strong>${
+              emp.analysisStatus === "completed" ? docFindingCount : "—"
+            }</strong> <span class="note">(packet total ${allFindings.length})</span></td></tr>
+          </table>
+          <p style="font-size:13px;line-height:1.5;color:#374151">
+            The Form I-9 for the above-mentioned employee has been reviewed as stated below:
+          </p>
+          <ol style="font-size:13px;line-height:1.5;color:#374151;margin:0 0 14px;padding-left:18px">
+            <li>Review &amp; Identify Errors</li>
+            <li>Review Completeness</li>
+            <li>Report issues requiring remediation</li>
+          </ol>
 
           <div class="analysis-doc-block">
-            <h4>Document under analysis</h4>
+            <h4>Live document</h4>
             <div class="analysis-doc-rail">
               ${
                 liveDocs.length
@@ -212,15 +245,7 @@ export function renderAssistView({
               <tbody>${sectionRows(section1)}</tbody>
             </table>
           </div>
-
-          <div class="rec-box">
-            <div class="warn">${escapeHtml(
-              docFindings.length
-                ? `This document has ${docFindingCount} finding(s). ${pack.recommendation || ""}`
-                : pack.recommendation || "—"
-            )}</div>
-            <ul>${remediationItems}</ul>
-          </div>
+          ${sectionRecBox(section1, "Section 1")}
 
           <h4>Section 2 Errors (${section2.length})</h4>
           <div class="findings-scroll">
@@ -229,6 +254,7 @@ export function renderAssistView({
               <tbody>${sectionRows(section2)}</tbody>
             </table>
           </div>
+          ${sectionRecBox(section2, "Section 2")}
 
           <h4>Document Review (${docReview.length})</h4>
           <div class="findings-scroll">
@@ -237,6 +263,7 @@ export function renderAssistView({
               <tbody>${sectionRows(docReview)}</tbody>
             </table>
           </div>
+          ${sectionRecBox(docReview, "Document Review")}
           ${
             otherSections.length
               ? `<h4>Other (${otherSections.length})</h4>
@@ -245,7 +272,8 @@ export function renderAssistView({
               <thead><tr><th>Errors</th><th>Error details</th></tr></thead>
               <tbody>${sectionRows(otherSections)}</tbody>
             </table>
-          </div>`
+          </div>
+          ${sectionRecBox(otherSections, "Other")}`
               : ""
           }
           <p class="note" data-count-check="doc-findings">
@@ -267,7 +295,7 @@ export function renderAssistView({
               state.agentBusy ? "disabled" : ""
             }>↑</button>
           </div>
-          <div class="disclaimer">OnBlick Assistant may make mistakes. Please review its responses carefully. <a href="#">Share your feedback</a></div>
+          <div class="disclaimer">OnBlick Assistant may make mistakes. Please review its responses carefully. <a href="#" data-feedback>Share your feedback</a></div>
         </div>
       </aside>
     </div>
@@ -305,6 +333,23 @@ export function renderAssistView({
     a.click();
     URL.revokeObjectURL(url);
   });
+  root.querySelector("[data-share]")?.addEventListener("click", async () => {
+    const summary = `${emp.name}'s I-9 Audit Notes — ${selectedDoc?.name || "packet"} — ${docFindingCount} finding(s)`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(summary);
+        alert(`Copied summary to clipboard:\n\n${summary}`);
+      } else {
+        alert(summary);
+      }
+    } catch {
+      alert(summary);
+    }
+  });
+  root.querySelector("[data-feedback]")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    alert("Thank you — feedback for OnBlick Audit Assistant can be shared with your OnBlick administrator.");
+  });
   root.querySelector("#start-correction")?.addEventListener("click", onStartCorrection);
   root.querySelector("#send")?.addEventListener("click", () => {
     const input = root.querySelector("#ask");
@@ -324,14 +369,16 @@ function statusBar(text) {
 }
 
 function idlePanel(employeeName, docErrors, docName) {
+  const count = Number(docErrors) || 0;
+  const focus = docName
+    ? `correct <strong>${escapeHtml(employeeName)}</strong>'s <strong>${escapeHtml(docName)}</strong>`
+    : `correct <strong>${escapeHtml(employeeName)}</strong>'s Form I-9`;
   return `
   <div class="assist-idle" id="assist-idle">
     ${icons.assistArt}
-    <p>Ask <strong>OnBlick Audit Assistant</strong> to help correct <strong>${escapeHtml(
-      employeeName
-    )}</strong>${docName ? `'s <strong>${escapeHtml(docName)}</strong>` : ""} based on the <strong>${
-      Number(docErrors) || 0
-    }</strong> finding(s) on this document.</p>
+    <p>Ask <strong>OnBlick Audit Assistant</strong> to help you ${focus} based on the <strong>${count}</strong> error${
+      count === 1 ? "" : "s"
+    } identified for this document.</p>
     <button class="btn btn-outline" type="button" id="start-correction">✨ Start Correction Recommendation</button>
   </div>`;
 }

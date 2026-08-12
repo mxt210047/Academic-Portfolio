@@ -1,4 +1,5 @@
 import { getFindingsForEmployee } from "../data/models.js";
+import { getFindingsForDocument } from "./auditAnalysis.js";
 import { interpretIntent } from "./intent.js";
 import { buildAgentPrompt } from "./promptBuilder.js";
 
@@ -6,17 +7,35 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function flattenFindings(employee, overrides = {}) {
+/**
+ * Flatten live findings for the agent. When documentId is set (Document Analysis
+ * selection), only that document's findings are used — no packet bleed.
+ */
+function flattenFindings(employee, overrides = {}, documentId = null) {
   const pack = getFindingsForEmployee(employee);
-  const source = Array.isArray(pack.all)
-    ? pack.all
-    : [...(pack.section1 || []), ...(pack.section2 || []), ...(pack.documentReview || [])];
+  const source =
+    documentId != null
+      ? getFindingsForDocument(employee, documentId)
+      : Array.isArray(pack.all)
+        ? pack.all
+        : [...(pack.section1 || []), ...(pack.section2 || []), ...(pack.documentReview || [])];
   const rows = source.map((f) => ({
     ...f,
     section: f.section || "Section 1",
     status: overrides[f.id] || f.status,
   }));
-  return { pack, rows, open: rows.filter((r) => r.status === "open") };
+  const scopedPack = {
+    ...pack,
+    all: rows,
+    documentNames: [
+      ...new Set(rows.map((f) => f.documentName).filter(Boolean)),
+    ],
+    recommendation:
+      documentId && rows.length
+        ? `Correct ${rows.length} finding(s) on the selected document for ${employee.name}.`
+        : pack.recommendation,
+  };
+  return { pack: scopedPack, rows, open: rows.filter((r) => r.status === "open") };
 }
 
 function planFromFindings(employee, open, pack) {
@@ -127,11 +146,19 @@ export async function runAgentTurn({
   userText,
   employee,
   findingOverrides,
+  documentId = null,
   onStatus,
 }) {
   const { intent } = interpretIntent(userText);
-  const { pack, open } = flattenFindings(employee, findingOverrides);
-  const prompt = buildAgentPrompt({ intent, userText, employee, findings: pack, openFindings: open });
+  const { pack, open } = flattenFindings(employee, findingOverrides, documentId);
+  const prompt = buildAgentPrompt({
+    intent,
+    userText,
+    employee,
+    findings: pack,
+    openFindings: open,
+    documentId,
+  });
 
   onStatus?.("Analyzing request");
   await delay(200);
@@ -146,11 +173,17 @@ export async function runAgentTurn({
   return { intent, prompt, ...result };
 }
 
-export async function startCorrectionRecommendation(employee, findingOverrides, onStatus) {
+export async function startCorrectionRecommendation(
+  employee,
+  findingOverrides,
+  onStatus,
+  documentId = null
+) {
   return runAgentTurn({
     userText: "Start correction recommendation",
     employee,
     findingOverrides,
+    documentId,
     onStatus,
   });
 }
