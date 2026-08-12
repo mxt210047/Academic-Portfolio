@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
-# Linux/macOS counterpart to START-I9-AUDIT.bat
+# Launches the OnBlick I-9 Audit Agent UI (Figma wireframe implementation).
+# Windows: START-I9-AUDIT.bat still targets OnBlickMicroservices I9Audit\START.bat
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-I9AUDIT="$ROOT/OnBlickMicroservices/src/API/Services/OpenAI/I9Audit"
-
-if [[ -f "$I9AUDIT/START.sh" ]]; then
-  exec bash "$I9AUDIT/START.sh" "$@"
-fi
-
-if [[ -f "$I9AUDIT/START.bat" ]]; then
-  echo "Found I9Audit tree but only START.bat (Windows). Run that on Windows, or provide START.sh."
-  exit 1
-fi
-
-echo "OnBlickMicroservices I9Audit not present at: $I9AUDIT"
-echo "Falling back to local I-9 Assist Audit Agent demo..."
-DEMO_DIR="$ROOT/I-9-Assist-Agent"
-cd "$DEMO_DIR"
+UI="$ROOT/I-9-Assist-Agent"
+API="$ROOT/OnBlickMicroservices/src/API/Services/OpenAI/I9Audit"
 PORT="${PORT:-8765}"
-exec python3 -m http.server "$PORT"
+
+if [[ -f "$UI/index.html" ]]; then
+  cd "$UI"
+  if curl -sf "http://127.0.0.1:${PORT}/" >/dev/null 2>&1; then
+    echo "I-9 Audit Agent already running: http://127.0.0.1:${PORT}/"
+  else
+    echo "Starting I-9 Audit Agent UI → http://127.0.0.1:${PORT}/"
+    exec python3 -m http.server "$PORT"
+  fi
+  exit 0
+fi
+
+if [[ -f "$API/START.sh" ]]; then
+  exec bash "$API/START.sh" "$@"
+fi
+
+echo "I-9 Assist Agent UI not found at $UI"
+exit 1
