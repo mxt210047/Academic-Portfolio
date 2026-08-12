@@ -1,6 +1,6 @@
 /**
  * Prompt construction for a future real AI API.
- * Currently consumed by the mock AI service.
+ * Consumed by the agent service with findings from the selected audit only.
  */
 
 export function buildAgentPrompt({ intent, userText, employee, findings, openFindings }) {
