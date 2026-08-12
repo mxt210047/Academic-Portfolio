@@ -1,15 +1,10 @@
-import {
-  availableFolders,
-  createEmptyAudits,
-  currentUser,
-  employeeCatalog,
-} from "../data/mockData.js";
+import { currentUser } from "../data/models.js";
 
 const listeners = new Set();
 
 const state = {
   view: "empty", // empty | list | audit | assist
-  audits: createEmptyAudits(),
+  audits: [],
   selectedAuditId: null,
   selectedEmployeeId: null,
   selectedFolders: [],
@@ -21,7 +16,7 @@ const state = {
   showImport: false,
   showConfirm: false,
   confirmAuditId: null,
-  agentStatus: null, // user-facing status string
+  agentStatus: null,
   agentBusy: false,
   chatStarted: false,
   messages: [],
@@ -62,12 +57,17 @@ export function getSelectedAudit() {
   return state.audits.find((a) => a.id === state.selectedAuditId) || null;
 }
 
+export function getAuditRoster(audit = getSelectedAudit()) {
+  return audit?.roster ? [...audit.roster] : [];
+}
+
 export function getSelectedEmployee() {
-  return employeeCatalog.find((e) => e.id === state.selectedEmployeeId) || null;
+  const roster = getAuditRoster();
+  return roster.find((e) => e.id === state.selectedEmployeeId) || null;
 }
 
 export function getFilteredEmployees() {
-  let rows = [...employeeCatalog];
+  let rows = getAuditRoster();
   const q = state.search.trim().toLowerCase();
   if (q) rows = rows.filter((e) => e.name.toLowerCase().includes(q));
   if (state.statusFilter === "errors") rows = rows.filter((e) => e.errors > 0);
@@ -112,4 +112,4 @@ export function resetChat() {
   state.agentBusy = false;
 }
 
-export { availableFolders, currentUser };
+export { currentUser };

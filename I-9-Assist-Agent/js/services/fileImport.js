@@ -1,6 +1,7 @@
 /**
  * Browser file/folder import helpers for the I-9 Audit Agent.
  * Accepts a master folder (webkitdirectory) or individual documents.
+ * Builds employee packets from folder structure — no mock catalogs.
  */
 
 const ALLOWED_EXT = new Set(["pdf", "doc", "docx", "jpg", "jpeg", "png"]);
@@ -16,7 +17,7 @@ export function isAllowedFile(file) {
 }
 
 /**
- * Normalize a FileList / File[] into import package records.
+ * Normalize a FileList / File[] into import package records with employees.
  * Directory uploads use webkitRelativePath (e.g. Master/Employee/file.pdf).
  */
 export function packagesFromFiles(fileList) {
@@ -29,14 +30,11 @@ export function packagesFromFiles(fileList) {
       errors.push(`${file.name} exceeds 25MB`);
       continue;
     }
-    // Skip macOS junk / empty placeholders inside folders
     if (file.name.startsWith(".")) continue;
     if (file.webkitRelativePath?.includes("/.")) continue;
 
     const rel = file.webkitRelativePath || file.name;
-    // Folders may include nested non-docs; only count allowed docs
     if (!isAllowedFile(file)) {
-      // Allow folder selection to include other files silently; warn only for top-level picks
       if (!file.webkitRelativePath) errors.push(`${file.name} is not PDF, DOC, JPG, or PNG`);
       continue;
     }
@@ -50,55 +48,63 @@ export function packagesFromFiles(fileList) {
     };
   }
 
-  /** @type {Map<string, { name: string, files: File[], employeeNames: Set<string> }>} */
+  /** @type {Map<string, { name: string, files: { file: File, rel: string, employeeKey: string }[] }>} */
   const groups = new Map();
 
   for (const { file, rel } of accepted) {
     const parts = rel.split("/").filter(Boolean);
     let packageName;
-    let employeeName = null;
+    let employeeKey;
 
-    if (parts.length >= 2) {
-      // MasterFolder / EmployeeName / doc
+    if (parts.length >= 3) {
+      // Master / EmployeeName / doc
       packageName = parts[0];
-      employeeName = parts.length >= 3 ? parts[1] : parts[0];
+      employeeKey = parts[1];
+    } else if (parts.length === 2) {
+      // Master / doc  → employee from file name
+      packageName = parts[0];
+      employeeKey = file.name.replace(/\.[^.]+$/, "") || file.name;
     } else {
-      // Loose file — group under a package named after the file (sans extension)
+      // Loose file
       packageName = file.name.replace(/\.[^.]+$/, "") || file.name;
+      employeeKey = packageName;
     }
 
     if (!groups.has(packageName)) {
-      groups.set(packageName, {
-        name: packageName,
-        files: [],
-        employeeNames: new Set(),
-      });
+      groups.set(packageName, { name: packageName, files: [] });
     }
-    const g = groups.get(packageName);
-    g.files.push(file);
-    if (employeeName) g.employeeNames.add(employeeName);
+    groups.get(packageName).files.push({ file, rel, employeeKey });
   }
 
   const packages = [...groups.values()].map((g, idx) => {
-    const employeeCount = g.employeeNames.size || estimateEmployeesFromFiles(g.files);
+    const byEmployee = new Map();
+    for (const entry of g.files) {
+      if (!byEmployee.has(entry.employeeKey)) {
+        byEmployee.set(entry.employeeKey, []);
+      }
+      byEmployee.get(entry.employeeKey).push(entry.file);
+    }
+
+    const employees = [...byEmployee.entries()].map(([name, empFiles]) => ({
+      name,
+      documentCount: empFiles.length,
+      fileNames: empFiles.map((f) => f.name),
+      totalBytes: empFiles.reduce((n, f) => n + f.size, 0),
+    }));
+
     return {
       id: `import-${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 8)}`,
       name: g.name,
-      employeeCount,
+      employeeCount: employees.length,
       documentCount: g.files.length,
       source: "upload",
-      // Keep lightweight metadata only (File objects are session-local)
-      fileNames: g.files.map((f) => f.name),
-      totalBytes: g.files.reduce((n, f) => n + f.size, 0),
+      fileNames: g.files.map((e) => e.file.name),
+      totalBytes: g.files.reduce((n, e) => n + e.file.size, 0),
+      employees,
     };
   });
 
   return { packages, errors };
-}
-
-function estimateEmployeesFromFiles(files) {
-  // If no employee subfolders, treat each document as one employee packet
-  return Math.max(1, files.length);
 }
 
 export function formatBytes(n) {

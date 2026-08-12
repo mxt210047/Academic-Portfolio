@@ -15,7 +15,7 @@ import {
   subscribe,
   toast,
 } from "./state/store.js";
-import { buildAuditFromFolder } from "./data/mockData.js";
+import { buildAuditFromImport } from "./data/models.js";
 import { runAgentTurn, startCorrectionRecommendation } from "./services/aiAgent.js";
 import { packagesFromFiles } from "./services/fileImport.js";
 
@@ -87,7 +87,7 @@ function validateImport() {
 function createAuditsFromSelection() {
   const { orgNameDraft, selectedFolders, audits } = getState();
   const created = selectedFolders.map((folder, i) =>
-    buildAuditFromFolder(
+    buildAuditFromImport(
       folder,
       i === 0 ? orgNameDraft.trim() : `${orgNameDraft.trim()} · ${folder.name}`
     )

@@ -1,4 +1,4 @@
-import { getFindingsForEmployee } from "../data/mockData.js";
+import { getFindingsForEmployee } from "../data/models.js";
 import { interpretIntent } from "./intent.js";
 import { buildAgentPrompt } from "./promptBuilder.js";
 
@@ -6,8 +6,8 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function flattenFindings(employeeId, overrides = {}) {
-  const pack = getFindingsForEmployee(employeeId);
+function flattenFindings(employee, overrides = {}) {
+  const pack = getFindingsForEmployee(employee);
   const rows = [
     ...pack.section1.map((f) => ({ ...f, section: "Section 1", status: overrides[f.id] || f.status })),
     ...pack.section2.map((f) => ({ ...f, section: "Section 2", status: overrides[f.id] || f.status })),
@@ -19,7 +19,11 @@ function planFromFindings(employee, open) {
   if (!open.length) {
     return {
       title: "No open remediation items",
-      steps: ["Retain the Form I-9 per policy.", "No employee outreach required."],
+      steps: [
+        "No findings are attached to this employee yet.",
+        "Imported documents are listed on the audit; connect the OnBlick audit/parsing API to populate Form I-9 findings.",
+        "Retain the Form I-9 per policy once analysis is complete.",
+      ],
       findingIds: [],
     };
   }
@@ -63,11 +67,15 @@ function responseForIntent(intent, ctx) {
     case "summarize_findings":
       return {
         kind: "answer",
-        text: `<strong>${employee.name}</strong> has <strong>${employee.errors}</strong> flagged issues (${open.length} still open). Technical: ${
-          open.filter((f) => f.class === "technical").length
-        }. Substantive: ${
-          open.filter((f) => f.class === "substantive").length
-        }. Guidance: ${pack.recommendation}`,
+        text: open.length
+          ? `<strong>${employee.name}</strong> has <strong>${employee.errors}</strong> flagged issues (${open.length} still open). Technical: ${
+              open.filter((f) => f.class === "technical").length
+            }. Substantive: ${
+              open.filter((f) => f.class === "substantive").length
+            }. Guidance: ${pack.recommendation}`
+          : `<strong>${employee.name}</strong> has <strong>no findings</strong> yet. ${employee.docs} imported document${
+              employee.docs === 1 ? "" : "s"
+            }${employee.documents?.length ? ` (${employee.documents.join(", ")})` : ""}. ${pack.recommendation}`,
       };
     case "approve_plan":
       return {
@@ -105,7 +113,8 @@ function escapeHtml(s) {
 }
 
 /**
- * Mock AI service — swap `generate` body for a real API later using buildAgentPrompt().
+ * Agent service — uses employee findings from the selected audit only.
+ * Swap generate body for a real API later using buildAgentPrompt().
  */
 export async function runAgentTurn({
   userText,
@@ -114,7 +123,7 @@ export async function runAgentTurn({
   onStatus,
 }) {
   const { intent } = interpretIntent(userText);
-  const { pack, open } = flattenFindings(employee.id, findingOverrides);
+  const { pack, open } = flattenFindings(employee, findingOverrides);
   const prompt = buildAgentPrompt({ intent, userText, employee, findings: pack, openFindings: open });
 
   onStatus?.("Analyzing request");
@@ -124,7 +133,6 @@ export async function runAgentTurn({
   onStatus?.("Generating recommendation");
   await delay(480);
 
-  // prompt is ready for a future LLM call
   void prompt;
 
   const result = responseForIntent(intent, { employee, open, pack, userText });

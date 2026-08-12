@@ -4,7 +4,7 @@ import {
   getSelectedAudit,
   getState,
 } from "../state/store.js";
-import { formatDisplayDate } from "../data/mockData.js";
+import { formatDisplayDate } from "../data/models.js";
 
 export function renderAuditDetail({ onBack, onOpenEmployee, onSearch, onFilter, onSort }) {
   const state = getState();
@@ -50,21 +50,25 @@ export function renderAuditDetail({ onBack, onOpenEmployee, onSearch, onFilter, 
         </tr>
       </thead>
       <tbody>
-        ${rows
-          .map(
-            (e) => `
+        ${
+          rows.length
+            ? rows
+                .map(
+                  (e) => `
           <tr data-emp="${e.id}">
             <td><div class="cell-name"><span class="person">👤</span>${escapeHtml(e.name)}</div></td>
-            <td>${e.docs} Documents</td>
+            <td>${e.docs} Document${e.docs === 1 ? "" : "s"}</td>
             <td>${
               e.errors
                 ? `<span class="badge badge-danger">${e.errors} Errors Found</span>`
-                : `<span class="badge badge-ok">No Errors Found</span>`
+                : `<span class="badge badge-muted">Pending analysis</span>`
             }</td>
             <td><button class="icon-btn" type="button" data-note="${e.id}" title="Open audit notes">📄</button></td>
           </tr>`
-          )
-          .join("")}
+                )
+                .join("")
+            : `<tr><td colspan="4"><div class="note">No employees in this import. Re-import a master folder organized by employee name.</div></td></tr>`
+        }
       </tbody>
     </table>
   </section>`);

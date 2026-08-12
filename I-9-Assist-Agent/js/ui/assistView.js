@@ -7,7 +7,7 @@ import {
 import {
   formatDisplayDate,
   getFindingsForEmployee,
-} from "../data/mockData.js";
+} from "../data/models.js";
 
 export function renderAssistView({
   onBackToList,
@@ -21,22 +21,36 @@ export function renderAssistView({
   const state = getState();
   const emp = getSelectedEmployee();
   const audit = getSelectedAudit();
-  const pack = getFindingsForEmployee(emp.id);
+  if (!emp) {
+    return el(`<section><p class="note">Select an employee from an imported audit.</p></section>`);
+  }
+  const pack = getFindingsForEmployee(emp);
   const overrides = state.findingOverrides;
+  const docList = (emp.documents || []).join(", ") || "—";
 
   const sectionRows = (items) =>
-    items
-      .map((f) => {
-        const status = overrides[f.id] || f.status;
-        return `
+    items.length
+      ? items
+          .map((f) => {
+            const status = overrides[f.id] || f.status;
+            return `
         <tr>
           <td><i class="swatch ${f.class === "technical" ? "tech" : "subst"}"></i> <strong>${escapeHtml(
             f.title
           )}</strong><div class="note">Status: ${escapeHtml(status)}</div></td>
           <td>${escapeHtml(f.detail)}</td>
         </tr>`;
-      })
-      .join("") || `<tr><td colspan="2">No findings in this section.</td></tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="2">No findings in this section yet.</td></tr>`;
+
+  const statusMeta = emp.errors
+    ? `<span class="err">${emp.errors} Errors Found</span>`
+    : `<span>No errors recorded yet</span>`;
+
+  const dateMeta = emp.completedOn
+    ? `Audit Completed on ${formatDisplayDate(emp.completedOn)}`
+    : "Awaiting Form I-9 analysis";
 
   const root = el(`
   <section>
@@ -48,8 +62,7 @@ export function renderAssistView({
       <div>
         <h1 class="page-title">${escapeHtml(emp.name)}'s I-9 Audit Notes</h1>
         <div class="meta">
-          Audit Completed on ${formatDisplayDate(emp.completedOn)} •
-          <span class="err">${emp.errors} Errors Found</span>
+          ${dateMeta} • ${statusMeta}
         </div>
       </div>
       <div style="display:flex;gap:8px">
@@ -69,9 +82,10 @@ export function renderAssistView({
           <table class="info-table">
             <tr><td>Employee Name</td><td>${escapeHtml(emp.name)}</td></tr>
             <tr><td>Purpose</td><td>${escapeHtml(pack.purpose)}</td></tr>
-            <tr><td>Department</td><td>${escapeHtml(emp.department)} &amp; OnBlick (Form I-9 Review Services)</td></tr>
+            <tr><td>Department</td><td>${escapeHtml(emp.department || "—")}</td></tr>
             <tr><td>Reviewed By</td><td>${escapeHtml(pack.reviewedBy)}</td></tr>
             <tr><td>Organization</td><td>${escapeHtml(audit?.name || "—")}</td></tr>
+            <tr><td>Imported Documents</td><td>${escapeHtml(docList)}</td></tr>
           </table>
           <p style="font-size:13px;line-height:1.5;color:#374151">
             Review steps: 1) Review &amp; Identify Errors, 2) Review Completeness, 3) Report issues requiring remediation.
@@ -123,7 +137,7 @@ export function renderAssistView({
   root.querySelector("[data-download]")?.addEventListener("click", () => {
     const blob = new Blob(
       [
-        `I-9 Audit Notes\nEmployee: ${emp.name}\nErrors: ${emp.errors}\nRecommendation: ${pack.recommendation}\n`,
+        `I-9 Audit Notes\nEmployee: ${emp.name}\nDocuments: ${docList}\nErrors: ${emp.errors}\nRecommendation: ${pack.recommendation}\n`,
       ],
       { type: "text/plain" }
     );
