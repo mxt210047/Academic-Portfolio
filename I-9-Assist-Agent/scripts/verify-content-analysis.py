@@ -139,7 +139,7 @@ def inject_files(page, files_js):
 
 
 def run_flow(page, payloads, org="Content Verify Org"):
-    page.goto(BASE, wait_until="networkidle")
+    page.goto(BASE + "?v=doc-widget-1", wait_until="networkidle")
     # Hard reset via reload to clear in-memory store
     page.goto(BASE + "?t=" + str(Path(tempfile.mktemp()).name), wait_until="networkidle")
     if page.locator('[data-action="import"]').count() == 0:
@@ -241,16 +241,33 @@ def main() -> int:
                 if page.locator("[data-close-agent]").count():
                     page.locator("[data-close-agent]").click()
                     page.wait_for_timeout(200)
+                # Widget is Document Analysis–page specific
+                assert_("Doc-analysis widget host after close", page.locator("[data-doc-analysis-widget]").count() > 0)
                 assert_("Widget launcher after close", page.locator("[data-open-agent]").count() > 0)
+                widget_doc = page.get_attribute("[data-doc-analysis-widget]", "data-document-id")
                 bound_before = page.get_attribute("[data-bound-document-id]", "data-bound-document-id")
+                assert_("Widget bound to current document", widget_doc == bound_before, f"widget={widget_doc} bound={bound_before}")
                 page.locator("[data-open-agent]").click()
                 page.wait_for_selector("[data-ai-agent-panel]", timeout=5000)
                 assert_("Agent panel reopened from widget", page.locator("[data-ai-agent-panel]").count() > 0)
+                assert_("Widget hidden while panel open", page.locator("[data-doc-analysis-widget]").count() == 0)
                 panel_doc = page.get_attribute("[data-ai-agent-panel]", "data-document-id")
                 bound_after = page.get_attribute("[data-bound-document-id]", "data-bound-document-id")
                 assert_("Widget reopen keeps document binding", bound_before == bound_after, f"{bound_before}→{bound_after}")
                 assert_("Agent panel context documentId matches", panel_doc == bound_after, f"panel={panel_doc}")
                 page.screenshot(path=str(OUT / "03b-widget.png"), full_page=True)
+
+                # Leave Document Analysis — widget must not appear globally on audit list
+                page.locator("[data-audit]").click()
+                page.wait_for_timeout(300)
+                assert_("No AI widget on View Audit page", page.locator("[data-doc-analysis-widget], [data-open-agent]").count() == 0)
+                page.locator("[data-note]").last.click()
+                page.wait_for_selector(".analysis-doc-block", timeout=10000)
+                # reopen notes may open with panel; close if open then check widget
+                if page.locator("[data-close-agent]").count():
+                    page.locator("[data-close-agent]").click()
+                    page.wait_for_timeout(200)
+                assert_("Widget returns on Document Analysis", page.locator("[data-doc-analysis-widget]").count() > 0)
 
                 # --- Rename test: same I-9 bytes, misleading filename ---
                 page.goto(BASE, wait_until="networkidle")

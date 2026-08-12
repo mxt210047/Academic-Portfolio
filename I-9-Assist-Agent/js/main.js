@@ -6,11 +6,9 @@ import { renderConfirmModal } from "./ui/confirmModal.js";
 import { renderAuditDetail } from "./ui/auditDetail.js";
 import { renderAssistView } from "./ui/assistView.js";
 import { renderDocumentView } from "./ui/documentView.js";
-import { renderAiAgentWidget } from "./ui/aiAgentWidget.js";
 import { renderToasts } from "./ui/toast.js";
 import {
   currentUser,
-  getSelectedAudit,
   getSelectedEmployee,
   getState,
   resetChat,
@@ -33,7 +31,6 @@ const headerRoot = document.getElementById("header-root");
 const appRoot = document.getElementById("app");
 const modalRoot = document.getElementById("modal-root");
 const toastRoot = document.getElementById("toast-root");
-const agentWidgetRoot = document.getElementById("agent-widget-root");
 
 /** Prevent an older analyzeAudit completion from overwriting a newer audit run */
 let analysisGeneration = 0;
@@ -247,45 +244,14 @@ function openEmployee(employeeId) {
 }
 
 function closeAgentPanel() {
-  // Minimize/close widget only — do not clear audit, document, findings, or chat
+  // Minimize/close on Document Analysis only — do not clear audit, document, findings, or chat
   setState({ agentPanelOpen: false });
 }
 
-/**
- * Widget launcher → existing AI Agent.
- * Preserves document/findings; opens Document Analysis with live employee context when needed.
- */
+/** Document Analysis page widget → open existing AI Assist Agent panel (same page). */
 function openAgentFromWidget() {
-  const state = getState();
-  const audit = getSelectedAudit();
-  const emp = getSelectedEmployee();
-
-  if (state.view === "assist" && emp) {
-    setState({ agentPanelOpen: true });
-    return;
-  }
-
-  if (emp) {
-    const firstDocId =
-      state.selectedDocumentId && (emp.documentIds || []).includes(state.selectedDocumentId)
-        ? state.selectedDocumentId
-        : emp.documentIds?.[0] || null;
-    setState({
-      view: "assist",
-      selectedDocumentId: firstDocId,
-      agentPanelOpen: true,
-      // keep chat / findings / overrides — do not reset audit context
-    });
-    return;
-  }
-
-  if (audit?.roster?.length) {
-    toast("Open an employee Audit Note, then use OnBlick Audit Assistant with that document context", "warn");
-    setState({ view: "audit", agentPanelOpen: false });
-    return;
-  }
-
-  toast("Import and open an audit before launching the assistant", "warn");
+  if (getState().view !== "assist" || !getSelectedEmployee()) return;
+  setState({ agentPanelOpen: true });
 }
 
 function selectAnalysisDocument(documentId) {
@@ -464,6 +430,7 @@ function render() {
       },
       onOpenDocument: (docId) => openDocument(docId),
       onSelectAnalysisDocument: selectAnalysisDocument,
+      onOpenAgent: openAgentFromWidget,
       onCloseAgent: closeAgentPanel,
       onStartCorrection: handleStartCorrection,
       onSend: handleSend,
@@ -481,12 +448,6 @@ function render() {
     });
   }
   appRoot.replaceChildren(page);
-
-  if (agentWidgetRoot) {
-    agentWidgetRoot.replaceChildren(
-      renderAiAgentWidget({ onOpen: openAgentFromWidget })
-    );
-  }
 
   modalRoot.replaceChildren();
   if (state.showImport) {

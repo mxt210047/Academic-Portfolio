@@ -20,17 +20,19 @@ import {
 } from "../services/statusMap.js";
 import { renderDocumentPreview } from "./documentPreview.js";
 import { renderAiAgentPanel } from "./aiAgentPanel.js";
+import { renderAiAgentWidget } from "./aiAgentWidget.js";
 
 /**
  * Document Analysis / Audit Notes — live document viewer + complete findings
  * for the currently selected document on the selected employee.
- * AI Agent is launched via widget → existing panel (open/close without losing audit state).
+ * AI Assist Agent widget is page-specific (launcher → existing agent panel).
  */
 export function renderAssistView({
   onBackToList,
   onBackToAudit,
   onOpenDocument,
   onSelectAnalysisDocument,
+  onOpenAgent,
   onCloseAgent,
   onStartCorrection,
   onSend,
@@ -355,6 +357,17 @@ export function renderAssistView({
         onRegenerate,
         onFeedback: () =>
           alert("Thank you — feedback for OnBlick Audit Assistant can be shared with your OnBlick administrator."),
+      })
+    );
+  } else {
+    // Page-specific widget launcher (Document Analysis only) when panel is closed
+    root.appendChild(
+      renderAiAgentWidget({
+        employeeName: emp.name,
+        documentName: selectedDoc?.name || null,
+        documentId: selectedDocId,
+        docFindingCount,
+        onOpen: onOpenAgent,
       })
     );
   }
