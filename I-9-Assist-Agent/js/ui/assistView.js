@@ -202,11 +202,12 @@ export function renderAssistView({
               extraction
                 ? `${extraction.method || "—"} · ${extraction.charCount ?? 0} chars${
                     extraction.ok ? "" : " · incomplete"
-                  }`
+                  }${extraction.validationStatus ? ` · ${extraction.validationStatus}` : ""}`
                 : emp.analysisStatus === "completed"
                   ? "—"
                   : "Pending analysis"
             )}</td></tr>
+            <tr><td>Analysis engine</td><td>${escapeHtml(pack.analysisMethod || "—")}</td></tr>
           </table>
           ${
             extraction?.textPreview

@@ -1,6 +1,7 @@
 /**
  * Form I-9 packet analysis over LIVE imported document content.
- * Extracts text from each File, then runs content-based I-9 rules.
+ * Prefers I9AuditService pipeline API (PDF → extract → validate).
+ * Falls back to in-browser content extraction when the API is unavailable.
  * Does NOT use filename patterns as the primary audit engine.
  * Does NOT import mockData.js.
  */
@@ -15,9 +16,24 @@ import {
   analyzeDocumentContent,
   analyzePacketFromContent,
 } from "./i9ContentAnalysis.js";
+import {
+  checkAuditApiHealth,
+  extractAuditFromFile,
+  mapPipelineExtraction,
+  mapPipelineFindings,
+} from "./i9AuditApi.js";
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+let apiHealthyCache = { at: 0, ok: null };
+
+async function isAuditApiAvailable() {
+  if (Date.now() - apiHealthyCache.at < 15000) return apiHealthyCache.ok;
+  const health = await checkAuditApiHealth();
+  apiHealthyCache = { at: Date.now(), ok: Boolean(health) };
+  return apiHealthyCache.ok;
 }
 
 /**
@@ -31,17 +47,69 @@ export async function analyzeEmployee(employee, ctx = {}) {
       : { id: d.id, name: d.name, relativePath: d.relativePath, size: d.size }
   );
   const now = new Date().toISOString();
-  /** @type {import("./i9ContentAnalysis.js").makeFinding extends Function ? any[] : any[]} */
   const allFindings = [];
   let n = 0;
   const nextId = () => `f-${employee.id}-${++n}`;
 
   const docResults = [];
   const extractionsByDocument = {};
+  let analysisMethod = "document-content";
+  let pipelineAuditId = null;
+
+  const apiOk = await isAuditApiAvailable();
 
   for (const d of docs) {
     const record = d.id ? getDocumentRecord(d.id) : null;
     const file = d.id ? getDocumentFile(d.id) : null;
+
+    // Prefer I9AuditService pipeline for live PDFs
+    if (apiOk && file && (record?.kind === "pdf" || /\.pdf$/i.test(d.name) || file.type?.includes("pdf"))) {
+      try {
+        const pipeline = await extractAuditFromFile(file, { signal: ctx.signal });
+        const mappedFindings = mapPipelineFindings(pipeline, {
+          documentId: d.id,
+          documentName: d.name,
+          idPrefix: `f-${employee.id}-${d.id || "doc"}`,
+        });
+        // Ensure ids via nextId for uniqueness in packet
+        for (const f of mappedFindings) {
+          if (!f.id || allFindings.some((x) => x.id === f.id)) f.id = nextId();
+          if (!f.recommendation) {
+            f.recommendation =
+              "Human review is required; automated correction guidance was not determined for this finding.";
+          }
+        }
+        const extractionSummary = mapPipelineExtraction(pipeline, d.name);
+        pipelineAuditId = extractionSummary.auditId || pipelineAuditId;
+        analysisMethod = "i9audit-pipeline";
+
+        cacheDocumentExtraction(d.id, {
+          method: extractionSummary.method,
+          charCount: extractionSummary.charCount,
+          pageCount: extractionSummary.pageCount,
+          ok: extractionSummary.ok,
+          uncertainty: extractionSummary.uncertainty,
+          textPreview: extractionSummary.textPreview,
+          extractedAt: now,
+        });
+
+        docResults.push({
+          documentId: d.id,
+          documentName: d.name,
+          classification: extractionSummary.classification,
+          findings: mappedFindings,
+          fields: extractionSummary.fields,
+        });
+        extractionsByDocument[d.id || d.name] = {
+          ...extractionSummary,
+          documentName: d.name,
+        };
+        allFindings.push(...mappedFindings);
+        continue;
+      } catch (err) {
+        console.warn("I9Audit pipeline failed; falling back to browser content analysis", err);
+      }
+    }
 
     let extraction = null;
     if (file) {
@@ -50,7 +118,6 @@ export async function analyzeEmployee(employee, ctx = {}) {
         name: d.name,
         type: record?.type || file.type,
       });
-      // Attach size for empty-file checks
       extraction.size = file.size;
       cacheDocumentExtraction(d.id, {
         method: extraction.method,
@@ -79,7 +146,7 @@ export async function analyzeEmployee(employee, ctx = {}) {
       documentId: d.id,
       documentName: d.name,
       extraction,
-      filenameHint: d.name, // supplementary only — content rules decide classification
+      filenameHint: d.name,
     });
 
     docResults.push({
@@ -98,16 +165,17 @@ export async function analyzeEmployee(employee, ctx = {}) {
     allFindings.push(...result.findings);
   }
 
-  // Packet-level content conclusions (still content-driven)
-  allFindings.push(
-    ...analyzePacketFromContent({
-      nextId,
-      employeeName: employee.name,
-      docResults,
-    })
-  );
+  // Packet-level conclusions only for browser path classifications
+  if (analysisMethod !== "i9audit-pipeline") {
+    allFindings.push(
+      ...analyzePacketFromContent({
+        nextId,
+        employeeName: employee.name,
+        docResults,
+      })
+    );
+  }
 
-  // Ensure every finding has a recommendation tied to the rule (no generic overwrite)
   for (const f of allFindings) {
     if (!f.recommendation) {
       f.recommendation =
@@ -122,10 +190,10 @@ export async function analyzeEmployee(employee, ctx = {}) {
   const errors = allFindings.length;
 
   const recommendation = errors
-    ? `Correct all ${errors} content-based finding(s) for ${employee.name} across ${
+    ? `Correct all ${errors} finding(s) for ${employee.name} across ${
         displayNames.join(", ") || "imported documents"
       }.`
-    : `No automated content findings for ${employee.name}. Retain the Form I-9 per policy.`;
+    : `No automated findings for ${employee.name}. Retain the Form I-9 per policy.`;
 
   return {
     ...employee,
@@ -138,13 +206,12 @@ export async function analyzeEmployee(employee, ctx = {}) {
         ? `Form I-9 corrections — ${ctx.organizationName}`
         : "Form I-9 corrections",
       reviewedBy: "OnBlick Audit Agent",
-      auditId: ctx.auditId || null,
+      auditId: pipelineAuditId || ctx.auditId || null,
       employeeId: employee.id,
       documentNames: displayNames,
       documentIds: docs.map((d) => d.id).filter(Boolean),
-      analysisMethod: "document-content",
+      analysisMethod,
       extractions: extractionsByDocument,
-      // Complete collection — Document Analysis must render every item
       all: allFindings,
       section1,
       section2,
@@ -158,7 +225,7 @@ export async function analyzeAudit(audit, { onProgress, signal } = {}) {
   const roster = audit.roster || [];
   const total = roster.length;
   const nextRoster = [];
-  const ctx = { auditId: audit.id, organizationName: audit.name };
+  const ctx = { auditId: audit.id, organizationName: audit.name, signal };
 
   for (let i = 0; i < roster.length; i++) {
     if (signal?.aborted) throw new Error("Analysis cancelled");
@@ -167,7 +234,7 @@ export async function analyzeAudit(audit, { onProgress, signal } = {}) {
       employeeName: emp.name,
       index: i,
       total,
-      status: `Extracting & analyzing ${emp.name} (${i + 1}/${total || 1})`,
+      status: `I-9 audit pipeline: ${emp.name} (${i + 1}/${total || 1})`,
     });
     if (signal?.aborted) throw new Error("Analysis cancelled");
     const analyzed = await analyzeEmployee({ ...emp, analysisStatus: "analyzing" }, ctx);
@@ -191,7 +258,6 @@ export async function analyzeAudit(audit, { onProgress, signal } = {}) {
   };
 }
 
-/** Complete findings list for an employee (no truncation). */
 export function getAllFindings(employee) {
   const pack = employee?.findings;
   if (!pack) return [];
@@ -199,7 +265,6 @@ export function getAllFindings(employee) {
   return [...(pack.section1 || []), ...(pack.section2 || []), ...(pack.documentReview || [])];
 }
 
-/** Findings for one live document id (same audit/employee packet). Strict document sync. */
 export function getFindingsForDocument(employee, documentId) {
   const all = getAllFindings(employee);
   if (!documentId) {
@@ -208,7 +273,6 @@ export function getFindingsForDocument(employee, documentId) {
   return all.filter((f) => f.documentId === documentId);
 }
 
-/** Extraction snapshot for a document (from last analysis). */
 export function getExtractionForDocument(employee, documentId) {
   const map = employee?.findings?.extractions || {};
   if (!documentId) return null;

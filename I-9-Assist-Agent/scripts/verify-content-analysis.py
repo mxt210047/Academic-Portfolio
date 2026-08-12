@@ -218,6 +218,8 @@ def main() -> int:
                 preview_a = page.locator("[data-extraction-preview]").inner_text() if page.locator("[data-extraction-preview]").count() else ""
                 assert_("A classified as form_i9", class_a == "form_i9", class_a)
                 assert_("A has content findings", count_a >= 1, count_a_text)
+                engine = page.locator("tr:has(td:text('Analysis engine')) td >> nth=1").inner_text().strip() if page.locator("tr:has(td:text('Analysis engine'))").count() else ""
+                assert_("Uses I9Audit pipeline or content engine", engine in ("i9audit-pipeline", "document-content", "") or "pipeline" in engine or "content" in engine, engine)
                 assert_("A extraction preview has I-9 text", "Form I-9" in preview_a or "Employment Eligibility" in preview_a, preview_a[:120])
                 page.screenshot(path=str(OUT / "02-doc-a.png"), full_page=True)
 
