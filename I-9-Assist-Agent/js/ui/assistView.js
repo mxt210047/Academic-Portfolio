@@ -57,6 +57,11 @@ export function renderAssistView({
   const section1 = docFindings.filter((f) => f.section === "Section 1");
   const section2 = docFindings.filter((f) => f.section === "Section 2");
   const docReview = docFindings.filter((f) => f.section === "Document Review");
+  const otherSections = docFindings.filter(
+    (f) => f.section !== "Section 1" && f.section !== "Section 2" && f.section !== "Document Review"
+  );
+  // Count integrity: grouped rows must equal full document finding list
+  const groupedCount = section1.length + section2.length + docReview.length + otherSections.length;
 
   const packetStatus = employeeStatusPresentation(emp, audit?.status);
   const docStatusLabel =
@@ -175,9 +180,13 @@ export function renderAssistView({
             </div>
             <div class="analysis-doc-stage" data-bound-document-id="${escapeAttr(selectedDocId || "")}">
               ${
-                selectedDoc
-                  ? renderDocumentPreview(selectedDoc)
-                  : `<div class="doc-fallback"><h2>No document selected</h2><p class="note">Import files and open an employee after analysis.</p></div>`
+                !emp.documentIds?.length
+                  ? `<div class="doc-fallback"><h2>No document in packet</h2><p class="note">This employee has no imported files.</p></div>`
+                  : selectedDoc
+                    ? renderDocumentPreview(selectedDoc)
+                    : `<div class="doc-fallback"><h2>Document preview unavailable</h2><p class="note">Document id ${escapeHtml(
+                        selectedDocId || "—"
+                      )} is not in the live import registry (file may have been revoked).</p></div>`
               }
             </div>
             ${
@@ -228,6 +237,22 @@ export function renderAssistView({
               <tbody>${sectionRows(docReview)}</tbody>
             </table>
           </div>
+          ${
+            otherSections.length
+              ? `<h4>Other (${otherSections.length})</h4>
+          <div class="findings-scroll">
+            <table class="err-table">
+              <thead><tr><th>Errors</th><th>Error details</th></tr></thead>
+              <tbody>${sectionRows(otherSections)}</tbody>
+            </table>
+          </div>`
+              : ""
+          }
+          <p class="note" data-count-check="doc-findings">
+            Showing ${docFindingCount} finding(s) for this document
+            ${groupedCount === docFindingCount ? "" : ` (group mismatch ${groupedCount})`}.
+            Packet total: ${allFindings.length}.
+          </p>
         </div>
       </section>
 

@@ -292,9 +292,12 @@ export function getAllFindings(employee) {
   return [...(pack.section1 || []), ...(pack.section2 || []), ...(pack.documentReview || [])];
 }
 
-/** Findings for one live document id (same audit/employee packet). */
+/** Findings for one live document id (same audit/employee packet). Strict document sync. */
 export function getFindingsForDocument(employee, documentId) {
   const all = getAllFindings(employee);
-  if (!documentId) return all;
-  return all.filter((f) => f.documentId === documentId || f.documentId == null);
+  if (!documentId) {
+    // No document selected — show packet-level findings only (no documentId)
+    return all.filter((f) => !f.documentId);
+  }
+  return all.filter((f) => f.documentId === documentId);
 }
