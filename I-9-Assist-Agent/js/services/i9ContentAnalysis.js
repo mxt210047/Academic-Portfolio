@@ -59,19 +59,105 @@ function hasAny(text, patterns) {
   return patterns.some((re) => re.test(text));
 }
 
-function captureAfter(text, labelRe, valueRe = /([A-Za-z0-9][A-Za-z0-9 .,'/#-]{0,80})/) {
+const LABEL_NOISE = [
+  "last name",
+  "first name",
+  "middle initial",
+  "address",
+  "city",
+  "town",
+  "state",
+  "zip",
+  "date of birth",
+  "social security",
+  "employee",
+  "employer",
+  "signature",
+  "document title",
+  "issuing authority",
+  "document number",
+  "expiration",
+  "first day",
+  "citizenship",
+  "attestation",
+  "section",
+  "form i-9",
+  "preparer",
+  "translator",
+  "list a",
+  "list b",
+  "list c",
+  "number",
+  "date",
+  "mm/dd/yyyy",
+];
+
+function isLabelNoise(val) {
+  if (val == null) return true;
+  const s = String(val).trim().toLowerCase();
+  if (!s || /^(n\/?a|none|null|-|\.|_{2,})$/i.test(s)) return true;
+  if (LABEL_NOISE.some((n) => s === n || s.startsWith(n + " ") || s.endsWith(" " + n))) return true;
+  const hits = LABEL_NOISE.filter((n) => s.includes(n)).length;
+  return hits >= 2;
+}
+
+function captureAfter(text, labelRe, valueRe = /([A-Za-z0-9][A-Za-z0-9 .,'/#-]{0,80})/, stopRe = null) {
+  let searchIn = text;
+  if (stopRe) {
+    const full = new RegExp(labelRe.source + "[\\s\\S]*", labelRe.flags.includes("i") ? "i" : "");
+    const fromLabel = text.match(full);
+    if (fromLabel) {
+      const chunk = fromLabel[0];
+      const stopIdx = chunk.search(stopRe);
+      searchIn = stopIdx >= 0 ? chunk.slice(0, stopIdx) : chunk;
+    }
+  }
   const re = new RegExp(labelRe.source + "[\\s:.-]*" + valueRe.source, labelRe.flags.includes("i") ? "i" : "");
-  const m = text.match(re);
+  const m = searchIn.match(re);
   if (!m) return null;
   const val = (m[1] || "").trim();
-  if (!val || /^(n\/?a|none|null|-)$/i.test(val)) return null;
+  if (!val || isLabelNoise(val)) return null;
   return val;
 }
 
 function looksBlankOrPlaceholder(val) {
   if (val == null) return true;
   const s = String(val).trim();
-  return !s || /^(n\/?a|none|null|-|\.|_{2,})$/i.test(s);
+  return !s || /^(n\/?a|none|null|-|\.|_{2,})$/i.test(s) || isLabelNoise(s);
+}
+
+function detectCitizenshipSelection(text) {
+  const options = [
+    "citizen of the united states",
+    "noncitizen national",
+    "lawful permanent resident",
+    "alien authorized to work",
+    "noncitizen authorized to work",
+  ];
+  const hits = options.filter((o) => new RegExp(o, "i").test(text));
+  // Blank Form I-9 prints all options — that is not a selection.
+  if (hits.length >= 2) return null;
+  const checked = text.match(
+    /\[\s*[xX✓✔]\s*\]\s*(citizen\s+of\s+the\s+united\s+states|noncitizen\s+national|lawful\s+permanent\s+resident|alien\s+authorized\s+to\s+work|noncitizen\s+authorized\s+to\s+work)/i
+  );
+  if (checked) return checked[1];
+  if (hits.length === 1) {
+    return hits[0];
+  }
+  return null;
+}
+
+function detectCompletedSignature(text, labelRe) {
+  const m = text.match(new RegExp(labelRe.source + ".{0,120}", labelRe.flags.includes("i") ? "is" : "s"));
+  if (!m) return false;
+  const chunk = m[0];
+  if (/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(chunk)) return true;
+  if (/signed\s+by\s+[A-Z][a-zA-Z\-']+/i.test(chunk)) return true;
+  const nameAfter = chunk.match(
+    new RegExp(labelRe.source + "[\\s:.-]+([A-Z][a-zA-Z\\-']+(?:\\s+[A-Z][a-zA-Z\\-']+){0,3})", "i")
+  );
+  if (nameAfter && !isLabelNoise(nameAfter[1])) return true;
+  return false;
 }
 
 /**
@@ -104,35 +190,46 @@ export function classifyFromContent(text, extractionOk) {
  * Missing values are null — never fabricated.
  */
 export function detectI9Fields(text) {
+  const nameVal = (v) => {
+    if (!v || isLabelNoise(v) || /\bname\b/i.test(v) || /\d/.test(v)) return null;
+    if (v.split(/\s+/).length > 4) return null;
+    return v;
+  };
+  const docVal = (v) => {
+    if (!v || isLabelNoise(v)) return null;
+    if (/document\s+(title|number)|issuing\s+authority|expiration|first\s+day/i.test(v)) return null;
+    if (/^(title|number|authority|expiration|date|issuing|document|first|day|employment)$/i.test(v)) return null;
+    return v;
+  };
   const fields = {
-    lastName: captureAfter(text, /last\s+name(?:\s*\(family\s+name\))?/i),
-    firstName: captureAfter(text, /first\s+name(?:\s*\(given\s+name\))?/i),
-    middleInitial: captureAfter(text, /middle\s+initial/i, /([A-Za-z]|N\/A|n\/a)/),
-    address: captureAfter(text, /address\s*\(street\s+number\s+and\s+name\)/i),
-    city: captureAfter(text, /city\s+or\s+town/i),
+    lastName: nameVal(captureAfter(text, /last\s+name(?:\s*\(family\s+name\))?/i, undefined, /first\s+name|middle\s+initial|address/i)),
+    firstName: nameVal(captureAfter(text, /first\s+name(?:\s*\(given\s+name\))?/i, undefined, /middle\s+initial|address|last\s+name/i)),
+    middleInitial: captureAfter(text, /middle\s+initial/i, /([A-Za-z]|N\/A|n\/a)/, /address|apt/i),
+    address: captureAfter(text, /address\s*\(street\s+number\s+and\s+name\)/i, undefined, /apt\.?\s*number|city\s+or\s+town/i),
+    city: captureAfter(text, /city\s+or\s+town/i, undefined, /state|zip/i),
     state: captureAfter(text, /\bstate\b/i, /([A-Z]{2})/),
     zip: captureAfter(text, /zip\s+code/i, /(\d{5}(?:-\d{4})?)/),
     dateOfBirth: captureAfter(text, /date\s+of\s+birth/i, /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/),
     ssn: captureAfter(text, /(?:U\.?S\.?\s+)?social\s+security\s+number/i, /([\dX*]{3}[-\s]?[\dX*]{2}[-\s]?[\dX*]{4}|XXX-XX-XXXX)/i),
     email: captureAfter(text, /employee'?s?\s+e-?mail/i, /([\w.+-]+@[\w.-]+\.\w+)/),
     phone: captureAfter(text, /employee'?s?\s+telephone/i, /([\d().\-\s]{7,20})/),
-    citizenship:
-      text.match(
-        /citizen\s+of\s+the\s+united\s+states|noncitizen\s+national|lawful\s+permanent\s+resident|alien\s+authorized\s+to\s+work|noncitizen\s+authorized\s+to\s+work/i
-      )?.[0] || null,
-    employeeSignaturePresent: /employee\s+signature/i.test(text) && !/employee\s+signature[\s\S]{0,40}\b(missing|blank|n\/a)\b/i.test(text),
+    citizenship: detectCitizenshipSelection(text),
+    employeeSignaturePresent: detectCompletedSignature(text, /employee\s+signature/i),
     employeeSignatureDate: captureAfter(text, /(?:today'?s?\s+)?date\s*\(mm\/dd\/yyyy\)/i, /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/),
     firstDayOfEmployment: captureAfter(
       text,
       /first\s+day\s+of\s+employment/i,
       /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/
     ),
-    documentTitle: captureAfter(text, /document\s+title/i),
-    issuingAuthority: captureAfter(text, /issuing\s+authority/i),
-    documentNumber: captureAfter(text, /document\s+(?:number|#|no\.?)/i),
+    documentTitle: docVal(captureAfter(text, /document\s+title/i, undefined, /issuing\s+authority|document\s+number/i)),
+    issuingAuthority: docVal(captureAfter(text, /issuing\s+authority/i, undefined, /document\s+number|expiration/i)),
+    documentNumber: docVal(captureAfter(text, /document\s+(?:number|#|no\.?)/i, /([A-Za-z0-9-]{5,40})/, /expiration|first\s+day/i)),
     expirationDate: captureAfter(text, /expiration\s+date/i, /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|N\/A|n\/a)/),
-    employerName: captureAfter(text, /(?:last\s+name[, ]+first\s+name|signature\s+of\s+employer|employer'?s?\s+business)/i),
-    employerSignaturePresent: /signature\s+of\s+employer|employer\s+or\s+authorized\s+representative\s+signature/i.test(text),
+    employerName: docVal(captureAfter(text, /employer'?s?\s+business(?:\s+or\s+organization)?\s+name/i, undefined, /address|title\s+of|signature/i)),
+    employerSignaturePresent: detectCompletedSignature(
+      text,
+      /signature\s+of\s+employer|employer\s+or\s+authorized\s+representative\s+signature/i
+    ),
     listAPresent: /list\s+a/i.test(text),
     listBPresent: /list\s+b/i.test(text),
     listCPresent: /list\s+c/i.test(text),
@@ -373,14 +470,14 @@ function analyzeFormI9Fields({ nextId, employeeName, documentId, documentName, f
     );
   }
 
-  if (!fields.employeeSignaturePresent && !/signed|signature\s+on\s+file/i.test(text)) {
+  if (!fields.employeeSignaturePresent) {
     findings.push(
       makeFinding({
         id: nextId(),
         section: "Section 1",
         cls: "substantive",
         title: "Employee signature not detected",
-        detail: `Extracted text for ${documentName} does not show a completed employee signature attestation.`,
+        detail: `Extracted text for ${documentName} does not show a completed employee signature attestation (label text alone is insufficient).`,
         ...base,
         field: "employeeSignature",
         detectedValue: null,

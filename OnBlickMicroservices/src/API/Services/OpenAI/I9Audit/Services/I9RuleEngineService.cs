@@ -15,81 +15,144 @@ public class I9RuleEngineService
 
         if (s1 == null && s2 == null)
         {
-            findings.Add(Finding("SYSTEM", "Extraction", "Error", "Minimum data",
-                "No Section 1 or Section 2 data was extracted. Validation was skipped.",
+            findings.Add(Finding(
+                "Document Review", "extraction", "Error", "Unable to extract Section 1/2",
+                "No Section 1 or Section 2 data was extracted from the live document. Manual review is required.",
                 recommendation: "Re-scan or upload a clearer Form I-9 with selectable text, then re-run the audit.",
-                documentName: sourceFileName));
+                documentName: sourceFileName,
+                className: "substantive"));
             return new I9ValidationResult { Findings = findings };
         }
 
         if (s1 != null)
         {
             if (Blank(s1.LastName) || Blank(s1.FirstName))
-                findings.Add(Finding("Section 1", "employeeName", "Error", "S1-Name",
-                    "Employee first and/or last name was not detected in extracted Section 1 content.",
+                findings.Add(Finding(
+                    "Section 1", "employeeName", "Error", "Employee name incomplete",
+                    "Required employee first and/or last name was not detected as a completed value in Section 1.",
                     detected: Join(s1.FirstName, s1.LastName),
-                    recommendation: "Only the employee may correct Section 1 name fields; initial and date with today's date (never backdate).",
-                    documentName: sourceFileName));
+                    recommendation: "Only the employee may correct Section 1 name fields; use N/A for unused middle initial; initial and date with today's date (never backdate).",
+                    documentName: sourceFileName,
+                    className: "substantive"));
+
+            if (Blank(s1.Address))
+                findings.Add(Finding(
+                    "Section 1", "address", "Warning", "Employee address missing",
+                    "Street address was not detected as a completed value in Section 1.",
+                    recommendation: "Employee completes address fields in Section 1 if blank; initial and date corrections.",
+                    documentName: sourceFileName,
+                    className: "technical"));
 
             if (Blank(s1.DateOfBirth))
-                findings.Add(Finding("Section 1", "dateOfBirth", "Warning", "S1-DOB",
+                findings.Add(Finding(
+                    "Section 1", "dateOfBirth", "Error", "Date of birth missing",
                     "Date of birth was not detected in Section 1.",
                     recommendation: "Employee completes Date of Birth if blank; initial and date the correction.",
-                    documentName: sourceFileName));
+                    documentName: sourceFileName,
+                    className: "substantive"));
 
             if (Blank(s1.CitizenshipStatus))
-                findings.Add(Finding("Section 1", "citizenship", "Error", "S1-Attestation",
-                    "Citizenship / immigration attestation was not detected in Section 1.",
-                    recommendation: "Employee must select the correct attestation box in Section 1.",
-                    documentName: sourceFileName));
+                findings.Add(Finding(
+                    "Section 1", "citizenship", "Error", "Citizenship attestation missing",
+                    "A completed citizenship/immigration attestation selection was not detected in Section 1.",
+                    recommendation: "Employee must select exactly one attestation box in Section 1.",
+                    documentName: sourceFileName,
+                    className: "substantive"));
 
             if (!s1.EmployeeSignaturePresent)
-                findings.Add(Finding("Section 1", "employeeSignature", "Error", "S1-Signature",
-                    "Employee signature was not detected in Section 1.",
+                findings.Add(Finding(
+                    "Section 1", "employeeSignature", "Error", "Employee signature missing",
+                    "A completed employee signature was not detected in Section 1 (label text alone is insufficient).",
                     recommendation: "Employee must sign and date Section 1.",
-                    documentName: sourceFileName));
+                    documentName: sourceFileName,
+                    className: "substantive"));
 
             if (Blank(s1.EmployeeSignatureDate))
-                findings.Add(Finding("Section 1", "employeeSignatureDate", "Warning", "S1-SignDate",
-                    "Employee signature date was not detected.",
+                findings.Add(Finding(
+                    "Section 1", "employeeSignatureDate", "Error", "Employee signature date missing",
+                    "Employee signature date (mm/dd/yyyy) was not detected.",
                     recommendation: "Employee enters the actual date of signing; never backdate.",
-                    documentName: sourceFileName));
+                    documentName: sourceFileName,
+                    className: "technical"));
         }
 
         if (s2 != null)
         {
-            if (Blank(s2.DocumentTitle) && Blank(s2.DocumentNumber))
-                findings.Add(Finding("Section 2", "documentTitle", "Error", "S2-Docs",
-                    "Neither document title nor document number was detected in Section 2.",
-                    recommendation: "Employer records List A or List B+C document title, issuing authority, number, and expiration.",
-                    documentName: sourceFileName));
+            if (Blank(s2.DocumentTitle))
+                findings.Add(Finding(
+                    "Section 2", "documentTitle", "Error", "Document title missing",
+                    "List A/B/C document title was not detected as a completed value in Section 2.",
+                    recommendation: "Employer records the document title from the List A or List B+C document presented.",
+                    documentName: sourceFileName,
+                    className: "substantive"));
+
+            if (Blank(s2.IssuingAuthority))
+                findings.Add(Finding(
+                    "Section 2", "issuingAuthority", "Error", "Issuing authority missing",
+                    "Issuing authority was not detected in Section 2.",
+                    recommendation: "Employer records the issuing authority from the document examined.",
+                    documentName: sourceFileName,
+                    className: "substantive"));
+
+            if (Blank(s2.DocumentNumber))
+                findings.Add(Finding(
+                    "Section 2", "documentNumber", "Error", "Document number missing",
+                    "Document number was not detected in Section 2.",
+                    recommendation: "Employer records the document number from the document examined.",
+                    documentName: sourceFileName,
+                    className: "substantive"));
+
+            if (Blank(s2.ExpirationDate))
+                findings.Add(Finding(
+                    "Section 2", "expirationDate", "Warning", "Expiration date missing",
+                    "Document expiration date was not detected (enter N/A when the document does not expire).",
+                    recommendation: "Employer enters expiration date or N/A as applicable.",
+                    documentName: sourceFileName,
+                    className: "technical"));
 
             if (Blank(s2.FirstDayOfEmployment))
-                findings.Add(Finding("Section 2", "firstDayOfEmployment", "Warning", "S2-Start",
+                findings.Add(Finding(
+                    "Section 2", "firstDayOfEmployment", "Error", "First day of employment missing",
                     "First day of employment was not detected in Section 2.",
                     recommendation: "Employer enters the employee's first day of employment in Section 2.",
-                    documentName: sourceFileName));
+                    documentName: sourceFileName,
+                    className: "substantive"));
 
             if (!s2.EmployerSignaturePresent)
-                findings.Add(Finding("Section 2", "employerSignature", "Error", "S2-Signature",
-                    "Employer / authorized representative signature was not detected in Section 2.",
+                findings.Add(Finding(
+                    "Section 2", "employerSignature", "Error", "Employer signature missing",
+                    "A completed employer/authorized representative signature was not detected in Section 2.",
                     recommendation: "Employer or authorized representative must sign and date Section 2 after examining documents.",
-                    documentName: sourceFileName));
+                    documentName: sourceFileName,
+                    className: "substantive"));
+
+            if (Blank(s2.DateOfEmployerSignature))
+                findings.Add(Finding(
+                    "Section 2", "employerSignatureDate", "Warning", "Employer certification date missing",
+                    "Employer certification date was not detected in Section 2.",
+                    recommendation: "Employer dates the certification with the actual date of signing.",
+                    documentName: sourceFileName,
+                    className: "technical"));
         }
         else if (s1 != null)
         {
-            findings.Add(Finding("Section 2", "section2", "Error", "S2-Missing",
+            findings.Add(Finding(
+                "Section 2", "section2", "Error", "Section 2 missing",
                 "Section 1 content was extracted but Section 2 employer verification was not found.",
                 recommendation: "Employer must complete Section 2 within 3 business days of the hire date.",
-                documentName: sourceFileName));
+                documentName: sourceFileName,
+                className: "substantive"));
         }
 
-        if (form.SupportingDocuments.Count == 0 && s2 != null && Blank(s2.DocumentTitle))
+        foreach (var s3 in form.Section3)
         {
-            findings.Add(Finding("Section 2", "supportingDocuments", "Warning", "S2-Support",
-                "No supporting identity document content was identified in the packet alongside incomplete Section 2 document fields.",
-                recommendation: "Retain copies of List A or List B+C documents examined and complete Section 2 from those documents.",
-                documentName: sourceFileName));
+            if (Blank(s3.RehireDate))
+                findings.Add(Finding(
+                    "Section 2", "reverification", "Warning", "Reverification/rehire incomplete",
+                    "Section 3 / reverification content was detected but rehire date was not found.",
+                    recommendation: "Complete Supplement B / Section 3 fields, signature, and date when reverifying or rehiring.",
+                    documentName: sourceFileName,
+                    className: "technical"));
         }
 
         return new I9ValidationResult { Findings = findings };
@@ -117,14 +180,15 @@ public class I9RuleEngineService
     }
 
     static ValidationFinding Finding(
-        string section, string field, string severity, string rule, string message,
-        string? detected = null, string? recommendation = null, string? documentName = null) =>
+        string section, string field, string severity, string title, string message,
+        string? detected = null, string? recommendation = null, string? documentName = null,
+        string? className = null) =>
         new()
         {
             Section = section,
             Field = field,
             Severity = severity,
-            Rule = rule,
+            Rule = title, // human-readable title for Document Analysis
             Message = message,
             DetectedValue = detected,
             Recommendation = recommendation,
@@ -138,16 +202,13 @@ public class I9RuleEngineService
 public class ParsingAuditClient
 {
     private readonly I9Audit.Configuration.ParsingOptions _options;
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ParsingAuditClient> _logger;
 
     public ParsingAuditClient(
         Microsoft.Extensions.Options.IOptions<I9Audit.Configuration.ParsingOptions> options,
-        IHttpClientFactory httpClientFactory,
         ILogger<ParsingAuditClient> logger)
     {
         _options = options.Value;
-        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -156,7 +217,7 @@ public class ParsingAuditClient
     public Task<object?> ParseAsync(IFormFile pdfFile, CancellationToken cancellationToken = default)
     {
         if (!IsConfigured) return Task.FromResult<object?>(null);
-        _logger.LogInformation("Parsing integration configured at {Url} but mapper not connected in this scaffold; falling back.", _options.BaseUrl);
+        _logger.LogInformation("Parsing integration configured at {Url}; falling back to local pipeline in this build.", _options.BaseUrl);
         return Task.FromResult<object?>(null);
     }
 }
@@ -170,8 +231,5 @@ public static class ParsingResultMapper
 public class PiiScrubber
 {
     public static string Scrub(string? value) =>
-        string.IsNullOrEmpty(value) ? "" : RegexReplace(value);
-
-    static string RegexReplace(string value) =>
-        System.Text.RegularExpressions.Regex.Replace(value, @"\d{3}-\d{2}-\d{4}", "***-**-****");
+        string.IsNullOrEmpty(value) ? "" : System.Text.RegularExpressions.Regex.Replace(value, @"\d{3}-\d{2}-\d{4}", "***-**-****");
 }
