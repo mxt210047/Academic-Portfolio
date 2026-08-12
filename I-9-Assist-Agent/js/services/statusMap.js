@@ -43,8 +43,9 @@ export function findingStatusLabel(status) {
   return s;
 }
 
-export function auditStatusLabel(status) {
-  if (!status) return "Unknown";
-  if (status === "Not Initiated" || status === "In Progress" || status === "Completed") return status;
-  return String(status);
+export function severityLabel(severity) {
+  if (!severity) return "unknown";
+  const s = String(severity).toLowerCase();
+  if (["high", "medium", "low", "info", "unknown"].includes(s)) return s;
+  return s;
 }

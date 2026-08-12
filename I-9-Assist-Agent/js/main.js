@@ -229,12 +229,21 @@ async function confirmAudit() {
 
 function openEmployee(employeeId) {
   resetChat();
+  const emp = getState().audits
+    .flatMap((a) => a.roster || [])
+    .find((e) => e.id === employeeId);
+  const firstDocId = emp?.documentIds?.[0] || null;
   setState({
     selectedEmployeeId: employeeId,
+    selectedDocumentId: firstDocId,
     view: "assist",
     findingOverrides: {},
     pendingRecommendation: null,
   });
+}
+
+function selectAnalysisDocument(documentId) {
+  setState({ selectedDocumentId: documentId });
 }
 
 function openDocument(documentId, employeeId = null) {
@@ -398,6 +407,7 @@ function render() {
         setState({ view: "audit", search: "", statusFilter: "all" });
       },
       onOpenDocument: (docId) => openDocument(docId),
+      onSelectAnalysisDocument: selectAnalysisDocument,
       onStartCorrection: handleStartCorrection,
       onSend: handleSend,
       onApprove: () => {

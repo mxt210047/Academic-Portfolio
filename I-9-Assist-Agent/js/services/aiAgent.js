@@ -8,10 +8,14 @@ function delay(ms) {
 
 function flattenFindings(employee, overrides = {}) {
   const pack = getFindingsForEmployee(employee);
-  const rows = [
-    ...pack.section1.map((f) => ({ ...f, section: "Section 1", status: overrides[f.id] || f.status })),
-    ...pack.section2.map((f) => ({ ...f, section: "Section 2", status: overrides[f.id] || f.status })),
-  ];
+  const source = Array.isArray(pack.all)
+    ? pack.all
+    : [...(pack.section1 || []), ...(pack.section2 || []), ...(pack.documentReview || [])];
+  const rows = source.map((f) => ({
+    ...f,
+    section: f.section || "Section 1",
+    status: overrides[f.id] || f.status,
+  }));
   return { pack, rows, open: rows.filter((r) => r.status === "open") };
 }
 

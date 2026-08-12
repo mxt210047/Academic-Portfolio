@@ -2,6 +2,8 @@ import { el } from "../utils/dom.js";
 import { getImportedDocument, getImportedDocuments } from "../data/mockData.js";
 import { getSelectedEmployee, getSelectedAudit, getState } from "../state/store.js";
 
+import { renderDocumentPreview } from "./documentPreview.js";
+
 /**
  * Page that opens an imported document for preview / download.
  */
@@ -20,7 +22,7 @@ export function renderDocumentView({ onBack, onOpenDocument }) {
     </section>`);
   }
 
-  const preview = renderPreview(doc);
+  const preview = renderDocumentPreview(doc);
 
   const root = el(`
   <section>
@@ -70,27 +72,6 @@ export function renderDocumentView({ onBack, onOpenDocument }) {
     btn.addEventListener("click", () => onOpenDocument(btn.getAttribute("data-doc")))
   );
   return root;
-}
-
-function renderPreview(doc) {
-  if (doc.kind === "pdf") {
-    return `<iframe class="doc-frame" title="${escapeAttr(doc.name)}" src="${doc.url}#toolbar=1"></iframe>`;
-  }
-  if (doc.kind === "image") {
-    return `<div class="doc-image-wrap"><img class="doc-image" alt="${escapeAttr(doc.name)}" src="${doc.url}" /></div>`;
-  }
-  if (doc.kind === "text") {
-    return `<iframe class="doc-frame doc-frame-text" title="${escapeAttr(doc.name)}" src="${doc.url}"></iframe>`;
-  }
-  return `
-    <div class="doc-fallback">
-      <h2>Preview not available in-browser</h2>
-      <p class="note">${escapeHtml(doc.name)} (${escapeHtml(doc.kind)}) can be downloaded or opened in a new tab.</p>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap">
-        <a class="btn btn-outline" href="${doc.url}" download="${escapeAttr(doc.name)}">Download file</a>
-        <a class="btn btn-primary" href="${doc.url}" target="_blank" rel="noopener">Open file</a>
-      </div>
-    </div>`;
 }
 
 function escapeHtml(s) {
