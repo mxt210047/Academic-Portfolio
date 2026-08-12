@@ -20,6 +20,8 @@ const state = {
   confirmAuditId: null,
   agentStatus: null,
   agentBusy: false,
+  auditBusy: false,
+  auditProgress: null, // user-facing analysis status string
   chatStarted: false,
   messages: [],
   pendingRecommendation: null,
@@ -72,8 +74,8 @@ export function getFilteredEmployees() {
   let rows = getAuditRoster();
   const q = state.search.trim().toLowerCase();
   if (q) rows = rows.filter((e) => e.name.toLowerCase().includes(q));
-  if (state.statusFilter === "errors") rows = rows.filter((e) => e.errors > 0);
-  if (state.statusFilter === "clean") rows = rows.filter((e) => e.errors === 0);
+  if (state.statusFilter === "errors") rows = rows.filter((e) => e.analysisStatus === "completed" && e.errors > 0);
+  if (state.statusFilter === "clean") rows = rows.filter((e) => e.analysisStatus === "completed" && e.errors === 0);
   rows.sort((a, b) => {
     const dir = state.sortDir === "asc" ? 1 : -1;
     if (state.sortKey === "errors") return (a.errors - b.errors) * dir;

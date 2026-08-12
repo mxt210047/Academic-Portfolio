@@ -18,6 +18,22 @@ export function renderAuditDetail({
   const audit = getSelectedAudit();
   const rows = getFilteredEmployees();
 
+  const statusCell = (e) => {
+    if (e.analysisStatus === "analyzing" || (audit?.status === "In Progress" && e.analysisStatus !== "completed")) {
+      return `<span class="badge badge-progress">Analyzing…</span>`;
+    }
+    if (e.analysisStatus !== "completed" && audit?.status === "Not Initiated") {
+      return `<span class="badge badge-muted">Pending analysis</span>`;
+    }
+    if (e.analysisStatus !== "completed") {
+      return `<span class="badge badge-muted">Pending analysis</span>`;
+    }
+    if (e.errors) {
+      return `<span class="badge badge-danger">${e.errors} Errors Found</span>`;
+    }
+    return `<span class="badge badge-ok">No Errors Found</span>`;
+  };
+
   const root = el(`
   <section>
     <div class="crumbs"><button type="button" data-back>I-9 Audits</button> &gt; View Audit</div>
@@ -30,6 +46,7 @@ export function renderAuditDetail({
               ? `Initiated on ${formatDisplayDate(audit.initiatedAt)} • Initiated by ${escapeHtml(audit.initiatedBy || "—")}`
               : "Not yet initiated"
           }
+          ${audit?.status === "Completed" ? ` • <span class="badge badge-ok">Completed</span>` : ""}
         </div>
       </div>
       <div style="display:flex;gap:8px">
@@ -37,6 +54,13 @@ export function renderAuditDetail({
         <button class="chip-btn" type="button">⋮</button>
       </div>
     </div>
+    ${
+      state.auditBusy && state.auditProgress
+        ? `<div class="audit-progress"><span class="spinner" aria-hidden="true"></span>${escapeHtml(
+            state.auditProgress
+          )}</div>`
+        : ""
+    }
     <div class="toolbar">
       <div class="search">
         <input id="emp-search" placeholder="Search employees" value="${escapeAttr(state.search)}" />
@@ -74,11 +98,7 @@ export function renderAuditDetail({
                   : `${e.docs} Document${e.docs === 1 ? "" : "s"}`
               }
             </td>
-            <td>${
-              e.errors
-                ? `<span class="badge badge-danger">${e.errors} Errors Found</span>`
-                : `<span class="badge badge-muted">Pending analysis</span>`
-            }</td>
+            <td>${statusCell(e)}</td>
             <td><button class="icon-btn" type="button" data-note="${e.id}" title="Open audit notes">📄</button></td>
           </tr>`;
                 })
@@ -113,9 +133,12 @@ export function renderAuditDetail({
     })
   );
   root.querySelector("[data-analytics]")?.addEventListener("click", () => {
-    const withErrors = rows.filter((r) => r.errors > 0).length;
+    const completed = rows.filter((r) => r.analysisStatus === "completed");
+    const withErrors = completed.filter((r) => r.errors > 0).length;
     alert(
-      `Analytics snapshot\n\nEmployees in view: ${rows.length}\nWith errors: ${withErrors}\nClean: ${rows.length - withErrors}`
+      `Analytics snapshot\n\nEmployees in view: ${rows.length}\nAnalyzed: ${completed.length}\nWith errors: ${withErrors}\nClean: ${
+        completed.length - withErrors
+      }\nAudit status: ${audit?.status || "—"}`
     );
   });
   return root;

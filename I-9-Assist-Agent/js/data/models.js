@@ -14,7 +14,7 @@ export function emptyFindings() {
     section1: [],
     section2: [],
     recommendation:
-      "No findings yet. Documents were imported; run the OnBlick audit engine (or connect the AI audit API) to analyze Form I-9 content.",
+      "Analysis has not run yet for this employee. Initiate the audit to analyze the imported Form I-9 packet.",
   };
 }
 
@@ -43,6 +43,7 @@ export function buildAuditFromImport(pkg, orgName) {
       documentIds,
       auditDate: null,
       completedOn: null,
+      analysisStatus: "pending", // pending | analyzing | completed
       findings: emptyFindings(),
     };
   });

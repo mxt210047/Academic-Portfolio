@@ -23,6 +23,7 @@ import {
   getPackages,
   removePackageAt,
 } from "./data/mockData.js";
+import { analyzeAudit } from "./services/auditAnalysis.js";
 import { runAgentTurn, startCorrectionRecommendation } from "./services/aiAgent.js";
 import { packagesFromFiles } from "./services/fileImport.js";
 
@@ -146,28 +147,53 @@ function initiateFromList(auditId, opts = {}) {
   setState({ showConfirm: true, confirmAuditId: auditId });
 }
 
-function confirmAudit() {
+async function confirmAudit() {
   const { confirmAuditId, audits } = getState();
-  const next = audits.map((a) =>
+  const started = audits.map((a) =>
     a.id === confirmAuditId
       ? {
           ...a,
           status: "In Progress",
           initiatedAt: new Date().toISOString(),
           initiatedBy: currentUser.name,
+          roster: (a.roster || []).map((e) => ({ ...e, analysisStatus: "analyzing" })),
         }
       : a
   );
   setState({
-    audits: next,
+    audits: started,
     showConfirm: false,
     selectedAuditId: confirmAuditId,
     confirmAuditId: null,
     view: "audit",
     search: "",
     statusFilter: "all",
+    auditBusy: true,
+    auditProgress: "Starting Form I-9 analysis",
   });
-  toast("I-9 audit initiated", "success");
+  toast("I-9 audit initiated — analyzing imported documents", "success");
+
+  const target = started.find((a) => a.id === confirmAuditId);
+  if (!target) {
+    setState({ auditBusy: false, auditProgress: null });
+    return;
+  }
+
+  try {
+    const completed = await analyzeAudit(target, {
+      onProgress: ({ status }) => setState({ auditBusy: true, auditProgress: status }),
+    });
+    const next = getState().audits.map((a) => (a.id === confirmAuditId ? completed : a));
+    setState({
+      audits: next,
+      auditBusy: false,
+      auditProgress: null,
+    });
+    toast("Audit analysis complete", "success");
+  } catch (err) {
+    setState({ auditBusy: false, auditProgress: null });
+    toast(err?.message || "Audit analysis failed", "error");
+  }
 }
 
 function openEmployee(employeeId) {

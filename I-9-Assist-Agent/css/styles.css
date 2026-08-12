@@ -137,6 +137,12 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .badge-ok { background: var(--success-soft); color: var(--success); }
 .badge-progress { background: #dbeafe; color: #1d4ed8; }
 
+.audit-progress {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 14px;
+  padding: 10px 12px; border-radius: 8px; background: #eff6ff; color: #1e40af;
+  font-size: 13px; font-weight: 600;
+}
+
 .overlay {
   position: fixed; inset: 0; background: rgba(17,24,39,.45);
   display: grid; place-items: center; z-index: 40; padding: 20px;
