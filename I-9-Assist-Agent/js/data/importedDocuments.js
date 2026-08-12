@@ -1,6 +1,5 @@
 /**
- * Re-exports document helpers from mockData.js (live import store).
- * Prefer importing from mockData.js directly.
+ * Document helpers for UI — backed by the production documentStore.
  */
 
 export {
@@ -8,7 +7,9 @@ export {
   getImportedDocument,
   getImportedDocuments,
   listImportedDocuments,
+  getDocumentFile,
+  getDocumentRecord,
   revokeImportedDocuments,
   revokePackageDocuments,
   clearImportedDocuments,
-} from "./mockData.js";
+} from "../services/documentStore.js";

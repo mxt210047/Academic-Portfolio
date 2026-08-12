@@ -1,9 +1,8 @@
 /**
- * Domain helpers for audits built from packages in mockData.js
- * (populated only by user imports).
+ * Domain helpers for audits built from live import packages in documentStore.
  */
 
-import { currentUser } from "./mockData.js";
+import { currentUser } from "../services/documentStore.js";
 
 export { currentUser };
 
@@ -25,7 +24,7 @@ export function getFindingsForEmployee(employee) {
   return employee.findings || emptyFindings();
 }
 
-/** Build an audit record from an import package held in mockData. */
+/** Build an audit record from an import package held in the live document store. */
 export function buildAuditFromImport(pkg, orgName) {
   const now = new Date();
   const roster = (pkg.employees || []).map((e, i) => {

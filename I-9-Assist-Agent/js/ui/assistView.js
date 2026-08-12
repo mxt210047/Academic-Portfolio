@@ -8,9 +8,10 @@ import {
   formatDisplayDate,
   getFindingsForEmployee,
 } from "../data/models.js";
-import { getImportedDocument, getImportedDocuments } from "../data/mockData.js";
+import { getImportedDocument, getImportedDocuments } from "../services/documentStore.js";
 import {
   getAllFindings,
+  getExtractionForDocument,
   getFindingsForDocument,
 } from "../services/auditAnalysis.js";
 import {
@@ -54,6 +55,7 @@ export function renderAssistView({
   // Findings synchronized to the displayed document (complete list, no slice)
   const docFindings = getFindingsForDocument(emp, selectedDocId);
   const docFindingCount = docFindings.length;
+  const extraction = getExtractionForDocument(emp, selectedDocId);
   const section1 = docFindings.filter((f) => f.section === "Section 1");
   const section2 = docFindings.filter((f) => f.section === "Section 2");
   const docReview = docFindings.filter((f) => f.section === "Document Review");
@@ -88,6 +90,11 @@ export function renderAssistView({
           </td>
           <td>
             ${escapeHtml(f.detail)}
+            ${
+              f.detectedValue != null && f.detectedValue !== ""
+                ? `<div class="note">Detected: ${escapeHtml(String(f.detectedValue))}</div>`
+                : ""
+            }
             ${f.recommendation ? `<div class="note">${escapeHtml(f.recommendation)}</div>` : ""}
           </td>
         </tr>`;
@@ -185,7 +192,42 @@ export function renderAssistView({
             <tr><td>Findings on this document</td><td><strong>${
               emp.analysisStatus === "completed" ? docFindingCount : "—"
             }</strong> <span class="note">(packet total ${allFindings.length})</span></td></tr>
+            <tr><td>Content classification</td><td>${escapeHtml(extraction?.classification || "—")}</td></tr>
+            <tr><td>Extraction method</td><td>${escapeHtml(
+              extraction
+                ? `${extraction.method || "—"} · ${extraction.charCount ?? 0} chars${
+                    extraction.ok ? "" : " · incomplete"
+                  }`
+                : emp.analysisStatus === "completed"
+                  ? "—"
+                  : "Pending analysis"
+            )}</td></tr>
           </table>
+          ${
+            extraction?.textPreview
+              ? `<p class="note" data-extraction-preview>Extracted text preview: ${escapeHtml(
+                  extraction.textPreview
+                )}${extraction.charCount > 280 ? "…" : ""}</p>`
+              : extraction?.uncertainty
+                ? `<p class="note" data-extraction-preview>${escapeHtml(extraction.uncertainty)}</p>`
+                : ""
+          }
+          ${
+            extraction?.fields && Object.keys(extraction.fields).length
+              ? `<table class="info-table analysis-extracted-fields">
+            <tr><td colspan="2"><strong>Detected field values (from document content)</strong></td></tr>
+            ${Object.entries(extraction.fields)
+              .filter(([, v]) => v != null && v !== "" && v !== false)
+              .map(
+                ([k, v]) =>
+                  `<tr><td>${escapeHtml(k)}</td><td>${escapeHtml(
+                    typeof v === "boolean" ? (v ? "yes" : "no") : String(v)
+                  )}</td></tr>`
+              )
+              .join("")}
+          </table>`
+              : ""
+          }
           <p style="font-size:13px;line-height:1.5;color:#374151">
             The Form I-9 for the above-mentioned employee has been reviewed as stated below:
           </p>

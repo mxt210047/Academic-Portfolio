@@ -1,5 +1,5 @@
 import { el } from "../utils/dom.js";
-import { getImportedDocument, getImportedDocuments } from "../data/mockData.js";
+import { getImportedDocument, getImportedDocuments } from "../services/documentStore.js";
 import { getSelectedEmployee, getSelectedAudit, getState } from "../state/store.js";
 
 import { renderDocumentPreview } from "./documentPreview.js";

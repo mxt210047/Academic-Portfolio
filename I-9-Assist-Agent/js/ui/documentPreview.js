@@ -1,5 +1,5 @@
 /**
- * Shared live-document preview markup (blob URL from mockData registry).
+ * Shared live-document preview markup (blob URL from documentStore registry).
  */
 
 export function renderDocumentPreview(doc) {

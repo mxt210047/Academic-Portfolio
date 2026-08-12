@@ -22,7 +22,7 @@ import {
   clearPackages,
   getPackages,
   removePackageAt,
-} from "./data/mockData.js";
+} from "./services/documentStore.js";
 import { analyzeAudit } from "./services/auditAnalysis.js";
 import { runAgentTurn, startCorrectionRecommendation } from "./services/aiAgent.js";
 import { packagesFromFiles } from "./services/fileImport.js";
@@ -64,8 +64,8 @@ function addImportedFiles(fileList) {
   syncSelectedFromMockData();
   toast(
     packages.length === 1
-      ? `Imported “${packages[0].name}” (${packages[0].documentCount} docs) into mockData`
-      : `Imported ${packages.length} packets into mockData`,
+      ? `Imported “${packages[0].name}” (${packages[0].documentCount} docs)`
+      : `Imported ${packages.length} packets`,
     "success"
   );
 }
