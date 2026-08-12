@@ -1,5 +1,5 @@
 import { el } from "../utils/dom.js";
-import { availableFolders, getState } from "../state/store.js";
+import { getState } from "../state/store.js";
 
 export function renderImportModal({
   onClose,
@@ -30,14 +30,6 @@ export function renderImportModal({
           <div class="hint">PDF, DOC, JPG or PNG (max. 25MB)</div>
         </div>
         <p class="note">Note: Please organize the folders by employee names within a master folder and upload the master folder here.</p>
-        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px">
-          ${availableFolders
-            .map(
-              (f) =>
-                `<button class="chip-btn" type="button" data-add-folder="${f.id}">+ ${escapeHtml(f.name)}</button>`
-            )
-            .join("")}
-        </div>
       </div>
       <div class="selected">
         <h4>Selected Folders</h4>
@@ -52,7 +44,7 @@ export function renderImportModal({
             </div>`
                 )
                 .join("")
-            : `<div class="note">No folders selected yet. Choose a sample packet above.</div>`
+            : `<div class="note">No folders selected yet.</div>`
         }
       </div>
       <div class="modal-actions">
@@ -67,12 +59,10 @@ export function renderImportModal({
   });
   root.querySelector("[data-close]").addEventListener("click", onClose);
   root.querySelector("#org-name").addEventListener("input", (e) => onOrgChange(e.target.value));
-  root.querySelector("[data-drop]").addEventListener("click", () => {
-    if (!state.selectedFolders.length) onAddFolder(availableFolders[0].id);
-  });
+  // Dropzone / link stay empty until the user explicitly chooses a folder chip
+  root.querySelector("[data-drop]").addEventListener("click", () => {});
   root.querySelector("[data-link]").addEventListener("click", (e) => {
     e.stopPropagation();
-    if (!state.selectedFolders.length) onAddFolder(availableFolders[0].id);
   });
   const drop = root.querySelector("[data-drop]");
   drop.addEventListener("dragover", (e) => {
@@ -83,11 +73,7 @@ export function renderImportModal({
   drop.addEventListener("drop", (e) => {
     e.preventDefault();
     drop.classList.remove("dragover");
-    if (!state.selectedFolders.length) onAddFolder(availableFolders[0].id);
   });
-  root.querySelectorAll("[data-add-folder]").forEach((b) =>
-    b.addEventListener("click", () => onAddFolder(b.getAttribute("data-add-folder")))
-  );
   root.querySelectorAll("[data-remove]").forEach((b) =>
     b.addEventListener("click", () => onRemoveFolder(+b.getAttribute("data-remove")))
   );

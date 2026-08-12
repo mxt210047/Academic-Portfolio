@@ -27,10 +27,11 @@ const toastRoot = document.getElementById("toast-root");
 renderHeader(headerRoot);
 
 function openImport() {
-  const state = getState();
   setState({
     showImport: true,
-    orgNameDraft: state.orgNameDraft || "Northwind Harbor Logistics",
+    // Keep blank — do not inject sample org/folder data on open
+    orgNameDraft: getState().orgNameDraft || "",
+    selectedFolders: getState().selectedFolders || [],
   });
 }
 
