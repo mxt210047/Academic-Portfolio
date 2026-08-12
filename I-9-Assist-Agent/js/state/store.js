@@ -3,10 +3,12 @@ import { currentUser } from "../data/models.js";
 const listeners = new Set();
 
 const state = {
-  view: "empty", // empty | list | audit | assist
+  view: "empty", // empty | list | audit | assist | document
   audits: [],
   selectedAuditId: null,
   selectedEmployeeId: null,
+  selectedDocumentId: null,
+  documentReturnView: "audit", // assist | audit | list
   selectedFolders: [],
   orgNameDraft: "",
   search: "",

@@ -75,7 +75,13 @@ function responseForIntent(intent, ctx) {
             }. Guidance: ${pack.recommendation}`
           : `<strong>${employee.name}</strong> has <strong>no findings</strong> yet. ${employee.docs} imported document${
               employee.docs === 1 ? "" : "s"
-            }${employee.documents?.length ? ` (${employee.documents.join(", ")})` : ""}. ${pack.recommendation}`,
+            }${
+              employee.documents?.length
+                ? ` (${employee.documents
+                    .map((d) => (typeof d === "string" ? d : d.name))
+                    .join(", ")})`
+                : ""
+            }. ${pack.recommendation}`,
       };
     case "approve_plan":
       return {

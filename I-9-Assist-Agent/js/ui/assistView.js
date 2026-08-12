@@ -12,6 +12,7 @@ import {
 export function renderAssistView({
   onBackToList,
   onBackToAudit,
+  onOpenDocument,
   onStartCorrection,
   onSend,
   onApprove,
@@ -26,7 +27,18 @@ export function renderAssistView({
   }
   const pack = getFindingsForEmployee(emp);
   const overrides = state.findingOverrides;
-  const docList = (emp.documents || []).join(", ") || "—";
+  const docs = Array.isArray(emp.documents)
+    ? emp.documents.map((d) => (typeof d === "string" ? { name: d, id: null } : d))
+    : [];
+  const docLinks = docs.length
+    ? docs
+        .map((d) =>
+          d.id
+            ? `<button type="button" class="linkish" data-open-doc="${d.id}">${escapeHtml(d.name)}</button>`
+            : escapeHtml(d.name)
+        )
+        .join(", ")
+    : "—";
 
   const sectionRows = (items) =>
     items.length
@@ -85,7 +97,7 @@ export function renderAssistView({
             <tr><td>Department</td><td>${escapeHtml(emp.department || "—")}</td></tr>
             <tr><td>Reviewed By</td><td>${escapeHtml(pack.reviewedBy)}</td></tr>
             <tr><td>Organization</td><td>${escapeHtml(audit?.name || "—")}</td></tr>
-            <tr><td>Imported Documents</td><td>${escapeHtml(docList)}</td></tr>
+            <tr><td>Imported Documents</td><td class="doc-links">${docLinks}</td></tr>
           </table>
           <p style="font-size:13px;line-height:1.5;color:#374151">
             Review steps: 1) Review &amp; Identify Errors, 2) Review Completeness, 3) Report issues requiring remediation.
@@ -134,10 +146,14 @@ export function renderAssistView({
 
   root.querySelector("[data-list]").addEventListener("click", onBackToList);
   root.querySelector("[data-audit]").addEventListener("click", onBackToAudit);
+  root.querySelectorAll("[data-open-doc]").forEach((btn) =>
+    btn.addEventListener("click", () => onOpenDocument(btn.getAttribute("data-open-doc")))
+  );
   root.querySelector("[data-download]")?.addEventListener("click", () => {
+    const names = docs.map((d) => d.name).join(", ") || "—";
     const blob = new Blob(
       [
-        `I-9 Audit Notes\nEmployee: ${emp.name}\nDocuments: ${docList}\nErrors: ${emp.errors}\nRecommendation: ${pack.recommendation}\n`,
+        `I-9 Audit Notes\nEmployee: ${emp.name}\nDocuments: ${names}\nErrors: ${emp.errors}\nRecommendation: ${pack.recommendation}\n`,
       ],
       { type: "text/plain" }
     );

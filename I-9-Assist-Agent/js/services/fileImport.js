@@ -1,7 +1,7 @@
 /**
  * Browser file/folder import helpers for the I-9 Audit Agent.
  * Accepts a master folder (webkitdirectory) or individual documents.
- * Builds employee packets from folder structure — no mock catalogs.
+ * Builds employee packets + document records from folder structure.
  */
 
 const ALLOWED_EXT = new Set(["pdf", "doc", "docx", "jpg", "jpeg", "png"]);
@@ -17,7 +17,7 @@ export function isAllowedFile(file) {
 }
 
 /**
- * Normalize a FileList / File[] into import package records with employees.
+ * Normalize a FileList / File[] into import package records with employees + documents.
  * Directory uploads use webkitRelativePath (e.g. Master/Employee/file.pdf).
  */
 export function packagesFromFiles(fileList) {
@@ -57,15 +57,12 @@ export function packagesFromFiles(fileList) {
     let employeeKey;
 
     if (parts.length >= 3) {
-      // Master / EmployeeName / doc
       packageName = parts[0];
       employeeKey = parts[1];
     } else if (parts.length === 2) {
-      // Master / doc  → employee from file name
       packageName = parts[0];
       employeeKey = file.name.replace(/\.[^.]+$/, "") || file.name;
     } else {
-      // Loose file
       packageName = file.name.replace(/\.[^.]+$/, "") || file.name;
       employeeKey = packageName;
     }
@@ -77,29 +74,44 @@ export function packagesFromFiles(fileList) {
   }
 
   const packages = [...groups.values()].map((g, idx) => {
+    const packageId = `import-${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 8)}`;
     const byEmployee = new Map();
     for (const entry of g.files) {
       if (!byEmployee.has(entry.employeeKey)) {
         byEmployee.set(entry.employeeKey, []);
       }
-      byEmployee.get(entry.employeeKey).push(entry.file);
+      byEmployee.get(entry.employeeKey).push(entry);
     }
 
-    const employees = [...byEmployee.entries()].map(([name, empFiles]) => ({
-      name,
-      documentCount: empFiles.length,
-      fileNames: empFiles.map((f) => f.name),
-      totalBytes: empFiles.reduce((n, f) => n + f.size, 0),
-    }));
+    const employees = [...byEmployee.entries()].map(([name, entries], empIdx) => {
+      const documents = entries.map((entry, docIdx) => ({
+        id: `doc-${packageId}-${empIdx}-${docIdx}`,
+        name: entry.file.name,
+        relativePath: entry.rel,
+        size: entry.file.size,
+        type: entry.file.type || "",
+        file: entry.file,
+      }));
+      return {
+        name,
+        documentCount: documents.length,
+        fileNames: documents.map((d) => d.name),
+        documents,
+        documentIds: documents.map((d) => d.id),
+        totalBytes: documents.reduce((n, d) => n + d.size, 0),
+      };
+    });
 
+    const allDocs = employees.flatMap((e) => e.documents);
     return {
-      id: `import-${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 8)}`,
+      id: packageId,
       name: g.name,
       employeeCount: employees.length,
-      documentCount: g.files.length,
+      documentCount: allDocs.length,
       source: "upload",
-      fileNames: g.files.map((e) => e.file.name),
-      totalBytes: g.files.reduce((n, e) => n + e.file.size, 0),
+      fileNames: allDocs.map((d) => d.name),
+      documentIds: allDocs.map((d) => d.id),
+      totalBytes: allDocs.reduce((n, d) => n + d.size, 0),
       employees,
     };
   });

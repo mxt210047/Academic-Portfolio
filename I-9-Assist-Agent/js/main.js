@@ -5,6 +5,7 @@ import { renderImportModal } from "./ui/importModal.js";
 import { renderConfirmModal } from "./ui/confirmModal.js";
 import { renderAuditDetail } from "./ui/auditDetail.js";
 import { renderAssistView } from "./ui/assistView.js";
+import { renderDocumentView } from "./ui/documentView.js";
 import { renderToasts } from "./ui/toast.js";
 import {
   currentUser,
@@ -16,6 +17,10 @@ import {
   toast,
 } from "./state/store.js";
 import { buildAuditFromImport } from "./data/models.js";
+import {
+  registerPackageDocuments,
+  revokePackageDocuments,
+} from "./data/importedDocuments.js";
 import { runAgentTurn, startCorrectionRecommendation } from "./services/aiAgent.js";
 import { packagesFromFiles } from "./services/fileImport.js";
 
@@ -44,13 +49,15 @@ function addImportedFiles(fileList) {
   if (!packages.length) return;
 
   const selected = [...getState().selectedFolders];
-  for (const pkg of packages) {
+  for (const raw of packages) {
+    const pkg = registerPackageDocuments(raw);
     const existing = selected.findIndex((f) => f.name === pkg.name && f.source === "upload");
     if (existing >= 0) {
+      revokePackageDocuments(selected[existing].id);
       selected[existing] = {
         ...selected[existing],
         ...pkg,
-        id: selected[existing].id,
+        id: pkg.id,
       };
     } else {
       selected.push(pkg);
@@ -67,7 +74,8 @@ function addImportedFiles(fileList) {
 
 function removeFolder(index) {
   const selected = [...getState().selectedFolders];
-  selected.splice(index, 1);
+  const [removed] = selected.splice(index, 1);
+  if (removed?.id) revokePackageDocuments(removed.id);
   setState({ selectedFolders: selected });
 }
 
@@ -171,6 +179,24 @@ function openEmployee(employeeId) {
     selectedEmployeeId: employeeId,
     view: "assist",
     findingOverrides: { ...getState().findingOverrides },
+  });
+}
+
+function openDocument(documentId, employeeId = null) {
+  const state = getState();
+  setState({
+    selectedDocumentId: documentId,
+    selectedEmployeeId: employeeId || state.selectedEmployeeId,
+    documentReturnView: state.view === "document" ? state.documentReturnView : state.view,
+    view: "document",
+  });
+}
+
+function closeDocument() {
+  const { documentReturnView } = getState();
+  setState({
+    view: documentReturnView || "audit",
+    selectedDocumentId: null,
   });
 }
 
@@ -296,9 +322,15 @@ function render() {
     page = renderAuditDetail({
       onBack: () => setState({ view: "list", search: "", statusFilter: "all" }),
       onOpenEmployee: openEmployee,
+      onOpenDocument: (docId, empId) => openDocument(docId, empId),
       onSearch: (v) => setState({ search: v }),
       onFilter: (v) => setState({ statusFilter: v }),
       onSort: toggleSort,
+    });
+  } else if (state.view === "document") {
+    page = renderDocumentView({
+      onBack: closeDocument,
+      onOpenDocument: (docId) => openDocument(docId),
     });
   } else {
     page = renderAssistView({
@@ -310,6 +342,7 @@ function render() {
         resetChat();
         setState({ view: "audit", search: "", statusFilter: "all" });
       },
+      onOpenDocument: (docId) => openDocument(docId),
       onStartCorrection: handleStartCorrection,
       onSend: handleSend,
       onApprove: () => {

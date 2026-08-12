@@ -13,22 +13,25 @@ I-9-Assist-Agent/
   index.html
   css/styles.css
   js/
-    main.js                 # app wiring / workflow
-    data/models.js          # audit/employee builders (no seeded catalogs)
-    state/store.js          # session state from imports only
+    main.js                      # app wiring / workflow
+    data/models.js               # audit/employee builders (no seeded catalogs)
+    data/importedDocuments.js    # registry of uploaded docs + preview URLs
+    state/store.js               # session state from imports only
     services/
-      fileImport.js         # choose files / folder / drag-drop → packages
-      intent.js             # intent detection
-      promptBuilder.js      # prompt payload for future LLM API
-      aiAgent.js            # agent service + statuses
-    ui/                     # presentational screens
-    utils/dom.js
+      fileImport.js              # choose files / folder / drag-drop → packages
+      intent.js
+      promptBuilder.js
+      aiAgent.js
+    ui/
+      documentView.js            # page to open/preview an imported document
+      ...
 ```
 
 ## Data rules
 
 - Starts empty — no mock employees, folders, or findings
 - Roster comes only from imported files/folders
+- Each upload is registered in `importedDocuments.js` and openable on the document page
 - Findings stay empty until a real audit/parsing API attaches them
 
 ## Workflow
@@ -36,8 +39,9 @@ I-9-Assist-Agent/
 1. Empty state → **Import I-9 Documents**
 2. Choose org + files/folder → **Save & Audit Later** or **Initiate Audit**
 3. Confirm initiate → employee table from import structure
-4. Open employee → Audit Notes + **OnBlick Audit Assistant**
-5. Start correction / chat → Approve · Reject · Regenerate
+4. Click **Documents** (or a file name on Audit Notes) → document preview page
+5. Open employee → Audit Notes + **OnBlick Audit Assistant**
+6. Start correction / chat → Approve · Reject · Regenerate
 
 ## Run
 

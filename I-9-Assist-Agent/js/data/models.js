@@ -29,17 +29,26 @@ export function getFindingsForEmployee(employee) {
 /** Build an audit record from an imported package (files/folders only). */
 export function buildAuditFromImport(pkg, orgName) {
   const now = new Date();
-  const roster = (pkg.employees || []).map((e, i) => ({
-    id: `emp-${pkg.id}-${i}`,
-    name: e.name,
-    department: "",
-    docs: e.documentCount,
-    errors: 0,
-    documents: e.fileNames || [],
-    auditDate: null,
-    completedOn: null,
-    findings: emptyFindings(),
-  }));
+  const roster = (pkg.employees || []).map((e, i) => {
+    const docs = (e.documents || []).map((d) =>
+      typeof d === "string"
+        ? { id: null, name: d }
+        : { id: d.id, name: d.name, relativePath: d.relativePath, size: d.size }
+    );
+    const documentIds = e.documentIds || docs.map((d) => d.id).filter(Boolean);
+    return {
+      id: `emp-${pkg.id}-${i}`,
+      name: e.name,
+      department: "",
+      docs: docs.length || e.documentCount || 0,
+      errors: 0,
+      documents: docs,
+      documentIds,
+      auditDate: null,
+      completedOn: null,
+      findings: emptyFindings(),
+    };
+  });
 
   return {
     id: `audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
@@ -50,6 +59,7 @@ export function buildAuditFromImport(pkg, orgName) {
     documents: pkg.documentCount,
     source: pkg.source || "upload",
     fileNames: pkg.fileNames || [],
+    documentIds: pkg.documentIds || roster.flatMap((r) => r.documentIds),
     roster,
     status: "Not Initiated", // Not Initiated | In Progress | Completed
     initiatedAt: null,

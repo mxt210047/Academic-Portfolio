@@ -6,7 +6,14 @@ import {
 } from "../state/store.js";
 import { formatDisplayDate } from "../data/models.js";
 
-export function renderAuditDetail({ onBack, onOpenEmployee, onSearch, onFilter, onSort }) {
+export function renderAuditDetail({
+  onBack,
+  onOpenEmployee,
+  onOpenDocument,
+  onSearch,
+  onFilter,
+  onSort,
+}) {
   const state = getState();
   const audit = getSelectedAudit();
   const rows = getFilteredEmployees();
@@ -53,19 +60,28 @@ export function renderAuditDetail({ onBack, onOpenEmployee, onSearch, onFilter, 
         ${
           rows.length
             ? rows
-                .map(
-                  (e) => `
+                .map((e) => {
+                  const firstDocId = e.documentIds?.[0];
+                  return `
           <tr data-emp="${e.id}">
             <td><div class="cell-name"><span class="person">👤</span>${escapeHtml(e.name)}</div></td>
-            <td>${e.docs} Document${e.docs === 1 ? "" : "s"}</td>
+            <td>
+              ${
+                firstDocId
+                  ? `<button class="linkish" type="button" data-docs="${e.id}" data-doc="${firstDocId}">${e.docs} Document${
+                      e.docs === 1 ? "" : "s"
+                    }</button>`
+                  : `${e.docs} Document${e.docs === 1 ? "" : "s"}`
+              }
+            </td>
             <td>${
               e.errors
                 ? `<span class="badge badge-danger">${e.errors} Errors Found</span>`
                 : `<span class="badge badge-muted">Pending analysis</span>`
             }</td>
             <td><button class="icon-btn" type="button" data-note="${e.id}" title="Open audit notes">📄</button></td>
-          </tr>`
-                )
+          </tr>`;
+                })
                 .join("")
             : `<tr><td colspan="4"><div class="note">No employees in this import. Re-import a master folder organized by employee name.</div></td></tr>`
         }
@@ -88,6 +104,12 @@ export function renderAuditDetail({ onBack, onOpenEmployee, onSearch, onFilter, 
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       onOpenEmployee(btn.getAttribute("data-note"));
+    })
+  );
+  root.querySelectorAll("[data-docs]").forEach((btn) =>
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onOpenDocument(btn.getAttribute("data-doc"), btn.getAttribute("data-docs"));
     })
   );
   root.querySelector("[data-analytics]")?.addEventListener("click", () => {
