@@ -15,14 +15,14 @@ function flattenFindings(employee, overrides = {}) {
   return { pack, rows, open: rows.filter((r) => r.status === "open") };
 }
 
-function planFromFindings(employee, open) {
+function planFromFindings(employee, open, pack) {
   if (!open.length) {
+    const docs = (employee.documents || []).map((d) => (typeof d === "string" ? d : d.name)).join(", ");
     return {
-      title: "No open remediation items",
+      title: `No open remediation items for ${employee.name}`,
       steps: [
-        "No findings are attached to this employee yet.",
-        "Imported documents are listed on the audit; connect the OnBlick audit/parsing API to populate Form I-9 findings.",
-        "Retain the Form I-9 per policy once analysis is complete.",
+        docs ? `Imported documents on file: ${docs}.` : "No imported documents are attached to this employee.",
+        pack?.recommendation || "Retain the Form I-9 per policy.",
       ],
       findingIds: [],
     };
@@ -38,12 +38,16 @@ function planFromFindings(employee, open) {
   };
 }
 
-function responseForIntent(intent, ctx) {
-  const { employee, open, pack, userText } = ctx;
+/**
+ * Build the assistant reply from the live prompt context (selected employee + findings).
+ */
+function responseFromPrompt(prompt, { employee, open, pack, userText, intent }) {
+  const ctx = prompt.context || {};
+  const name = ctx.employeeName || employee.name;
   switch (intent) {
     case "start_correction":
     case "regenerate": {
-      const plan = planFromFindings(employee, open);
+      const plan = planFromFindings(employee, open, pack);
       return {
         kind: "recommendation",
         text: `<strong>${plan.title}</strong><ol>${plan.steps.map((s) => `<li>${s.replace(/^\d+\.\s*/, "")}</li>`).join("")}</ol>`,
@@ -53,35 +57,29 @@ function responseForIntent(intent, ctx) {
     case "section1_help":
       return {
         kind: "answer",
-        text: `For <strong>${employee.name}</strong>'s Section 1 items: only the employee should edit those fields. Use N/A for unused blanks, never backdate, and initial with the actual correction date. Open Section 1 findings: ${
+        text: `For <strong>${name}</strong>'s Section 1 items: only the employee should edit those fields. Use N/A for unused blanks, never backdate, and initial with the actual correction date. Open Section 1 findings: ${
           open.filter((f) => f.section === "Section 1").map((f) => f.title).join(", ") || "none"
         }.`,
       };
     case "section2_help":
       return {
         kind: "answer",
-        text: `Section 2 fixes for <strong>${employee.name}</strong> belong to the employer/authorized representative. Prefer List A <em>or</em> List B+C (not both). Line through improper entries, initial, and date. Open Section 2 findings: ${
+        text: `Section 2 fixes for <strong>${name}</strong> belong to the employer/authorized representative. Prefer List A <em>or</em> List B+C (not both). Open Section 2 findings: ${
           open.filter((f) => f.section === "Section 2").map((f) => f.title).join(", ") || "none"
         }.`,
       };
     case "summarize_findings":
       return {
         kind: "answer",
-        text: open.length
-          ? `<strong>${employee.name}</strong> has <strong>${employee.errors}</strong> flagged issues (${open.length} still open). Technical: ${
-              open.filter((f) => f.class === "technical").length
-            }. Substantive: ${
-              open.filter((f) => f.class === "substantive").length
-            }. Guidance: ${pack.recommendation}`
-          : `<strong>${employee.name}</strong> has <strong>no findings</strong> yet. ${employee.docs} imported document${
-              employee.docs === 1 ? "" : "s"
-            }${
-              employee.documents?.length
-                ? ` (${employee.documents
-                    .map((d) => (typeof d === "string" ? d : d.name))
-                    .join(", ")})`
-                : ""
-            }. ${pack.recommendation}`,
+        text: ctx.openFindingCount
+          ? `<strong>${name}</strong> has <strong>${ctx.errorCount}</strong> flagged issues (${ctx.openFindingCount} open). Technical: ${ctx.technicalCount}. Substantive: ${ctx.substantiveCount}. Documents: ${(
+              pack.documentNames ||
+              employee.documents?.map((d) => (typeof d === "string" ? d : d.name)) ||
+              []
+            ).join(", ") || "—"}. Guidance: ${ctx.recommendationSeed || pack.recommendation}`
+          : `<strong>${name}</strong> has <strong>no open findings</strong>. ${(pack.documentNames || []).join(", ") || `${employee.docs} document(s)`}. ${
+              ctx.recommendationSeed || pack.recommendation
+            }`,
       };
     case "approve_plan":
       return {
@@ -103,7 +101,7 @@ function responseForIntent(intent, ctx) {
     default:
       return {
         kind: "answer",
-        text: `I can help remediate <strong>${employee.name}</strong>'s Form I-9. You asked: “${escapeHtml(
+        text: `I can help remediate <strong>${name}</strong>'s Form I-9 using the current audit result (${ctx.openFindingCount || 0} open findings). You asked: “${escapeHtml(
           userText
         )}”. Try “summarize findings”, “Section 1 help”, “Section 2 help”, or “start correction recommendation”.`,
       };
@@ -119,8 +117,7 @@ function escapeHtml(s) {
 }
 
 /**
- * Agent service — uses employee findings from the selected audit only.
- * Swap generate body for a real API later using buildAgentPrompt().
+ * Agent turn for the selected employee — uses live findings from Document Analysis state.
  */
 export async function runAgentTurn({
   userText,
@@ -133,18 +130,16 @@ export async function runAgentTurn({
   const prompt = buildAgentPrompt({ intent, userText, employee, findings: pack, openFindings: open });
 
   onStatus?.("Analyzing request");
-  await delay(350);
+  await delay(200);
   onStatus?.("Reviewing available information");
-  await delay(420);
+  await delay(220);
   onStatus?.("Generating recommendation");
-  await delay(480);
+  await delay(240);
 
-  void prompt;
-
-  const result = responseForIntent(intent, { employee, open, pack, userText });
+  const result = responseFromPrompt(prompt, { employee, open, pack, userText, intent });
   onStatus?.("Ready for review");
-  await delay(180);
-  return { intent, ...result };
+  await delay(100);
+  return { intent, prompt, ...result };
 }
 
 export async function startCorrectionRecommendation(employee, findingOverrides, onStatus) {

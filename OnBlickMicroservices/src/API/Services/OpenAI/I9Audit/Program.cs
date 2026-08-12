@@ -35,16 +35,10 @@ app.MapGet("/api/i9-assist/audit", () => Results.Ok(new
 .WithName("GetAudit")
 .WithOpenApi();
 
-app.MapGet("/api/i9-assist/findings", () => Results.Ok(new[]
+app.MapGet("/api/i9-assist/findings", () => Results.Ok(new
 {
-    new
-    {
-        employeeId = "EXAMPLE-001",
-        findingClass = "Technical",
-        findingCodes = "S1-DATE",
-        findingDetail = "Section 1 date blank",
-        remediationCompleted = false
-    }
+    note = "Scaffold only. Live Document Analysis is served by the I-9-Assist-Agent UI from imported files via analyzeAudit — not this sample payload.",
+    findings = Array.Empty<object>()
 }))
 .WithName("GetFindings")
 .WithOpenApi();

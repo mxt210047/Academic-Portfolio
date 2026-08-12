@@ -5,6 +5,7 @@ import {
   getState,
 } from "../state/store.js";
 import { formatDisplayDate } from "../data/models.js";
+import { employeeStatusPresentation } from "../services/statusMap.js";
 
 export function renderAuditDetail({
   onBack,
@@ -19,19 +20,8 @@ export function renderAuditDetail({
   const rows = getFilteredEmployees();
 
   const statusCell = (e) => {
-    if (e.analysisStatus === "analyzing" || (audit?.status === "In Progress" && e.analysisStatus !== "completed")) {
-      return `<span class="badge badge-progress">Analyzing…</span>`;
-    }
-    if (e.analysisStatus !== "completed" && audit?.status === "Not Initiated") {
-      return `<span class="badge badge-muted">Pending analysis</span>`;
-    }
-    if (e.analysisStatus !== "completed") {
-      return `<span class="badge badge-muted">Pending analysis</span>`;
-    }
-    if (e.errors) {
-      return `<span class="badge badge-danger">${e.errors} Errors Found</span>`;
-    }
-    return `<span class="badge badge-ok">No Errors Found</span>`;
+    const s = employeeStatusPresentation(e, audit?.status);
+    return `<span class="badge ${s.badge}">${escapeHtml(s.label)}</span>`;
   };
 
   const root = el(`

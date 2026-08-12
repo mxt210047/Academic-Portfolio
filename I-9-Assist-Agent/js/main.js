@@ -32,6 +32,9 @@ const appRoot = document.getElementById("app");
 const modalRoot = document.getElementById("modal-root");
 const toastRoot = document.getElementById("toast-root");
 
+/** Prevent an older analyzeAudit completion from overwriting a newer audit run */
+let analysisGeneration = 0;
+
 renderHeader(headerRoot);
 
 function syncSelectedFromMockData() {
@@ -149,6 +152,8 @@ function initiateFromList(auditId, opts = {}) {
 
 async function confirmAudit() {
   const { confirmAuditId, audits } = getState();
+  const gen = ++analysisGeneration;
+  resetChat();
   const started = audits.map((a) =>
     a.id === confirmAuditId
       ? {
@@ -156,7 +161,23 @@ async function confirmAudit() {
           status: "In Progress",
           initiatedAt: new Date().toISOString(),
           initiatedBy: currentUser.name,
-          roster: (a.roster || []).map((e) => ({ ...e, analysisStatus: "analyzing" })),
+          roster: (a.roster || []).map((e) => ({
+            ...e,
+            analysisStatus: "analyzing",
+            errors: 0,
+            completedOn: null,
+            auditDate: null,
+            findings: {
+              purpose: "Form I-9 corrections",
+              reviewedBy: "—",
+              section1: [],
+              section2: [],
+              recommendation: "Analysis in progress for this employee.",
+              auditId: a.id,
+              employeeId: e.id,
+              documentNames: (e.documents || []).map((d) => (typeof d === "string" ? d : d.name)),
+            },
+          })),
         }
       : a
   );
@@ -164,7 +185,11 @@ async function confirmAudit() {
     audits: started,
     showConfirm: false,
     selectedAuditId: confirmAuditId,
+    selectedEmployeeId: null,
+    selectedDocumentId: null,
     confirmAuditId: null,
+    findingOverrides: {},
+    pendingRecommendation: null,
     view: "audit",
     search: "",
     statusFilter: "all",
@@ -181,16 +206,22 @@ async function confirmAudit() {
 
   try {
     const completed = await analyzeAudit(target, {
-      onProgress: ({ status }) => setState({ auditBusy: true, auditProgress: status }),
+      onProgress: ({ status }) => {
+        if (gen !== analysisGeneration) return;
+        setState({ auditBusy: true, auditProgress: status });
+      },
     });
+    if (gen !== analysisGeneration) return;
     const next = getState().audits.map((a) => (a.id === confirmAuditId ? completed : a));
     setState({
       audits: next,
       auditBusy: false,
       auditProgress: null,
+      findingOverrides: {},
     });
     toast("Audit analysis complete", "success");
   } catch (err) {
+    if (gen !== analysisGeneration) return;
     setState({ auditBusy: false, auditProgress: null });
     toast(err?.message || "Audit analysis failed", "error");
   }
@@ -201,7 +232,8 @@ function openEmployee(employeeId) {
   setState({
     selectedEmployeeId: employeeId,
     view: "assist",
-    findingOverrides: { ...getState().findingOverrides },
+    findingOverrides: {},
+    pendingRecommendation: null,
   });
 }
 

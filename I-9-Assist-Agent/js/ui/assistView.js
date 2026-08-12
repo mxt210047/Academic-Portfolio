@@ -8,7 +8,14 @@ import {
   formatDisplayDate,
   getFindingsForEmployee,
 } from "../data/models.js";
+import {
+  employeeStatusPresentation,
+  findingStatusLabel,
+} from "../services/statusMap.js";
 
+/**
+ * Document Analysis / Audit Notes — values bind to the selected live audit employee.
+ */
 export function renderAssistView({
   onBackToList,
   onBackToAudit,
@@ -25,11 +32,15 @@ export function renderAssistView({
   if (!emp) {
     return el(`<section><p class="note">Select an employee from an imported audit.</p></section>`);
   }
+
+  // Always read findings from the selected employee's audit result (not a static catalog)
   const pack = getFindingsForEmployee(emp);
   const overrides = state.findingOverrides;
+  const status = employeeStatusPresentation(emp, audit?.status);
   const docs = Array.isArray(emp.documents)
     ? emp.documents.map((d) => (typeof d === "string" ? { name: d, id: null } : d))
     : [];
+  const docNames = pack.documentNames?.length ? pack.documentNames : docs.map((d) => d.name);
   const docLinks = docs.length
     ? docs
         .map((d) =>
@@ -40,32 +51,48 @@ export function renderAssistView({
         .join(", ")
     : "—";
 
+  const openFindings = [
+    ...pack.section1.map((f) => ({ ...f, section: "Section 1" })),
+    ...pack.section2.map((f) => ({ ...f, section: "Section 2" })),
+  ].filter((f) => (overrides[f.id] || f.status) === "open");
+
+  const remediationItems = openFindings.length
+    ? openFindings
+        .map(
+          (f) =>
+            `<li><strong>${escapeHtml(f.title)}</strong> (${escapeHtml(f.section)} · ${escapeHtml(
+              f.class
+            )}): ${escapeHtml(f.detail)}</li>`
+        )
+        .join("")
+    : `<li>${
+        emp.analysisStatus === "completed"
+          ? "No open remediation items for this employee."
+          : "Initiate and complete analysis to populate remediation items."
+      }</li>`;
+
   const sectionRows = (items) =>
     items.length
       ? items
           .map((f) => {
-            const status = overrides[f.id] || f.status;
+            const st = findingStatusLabel(overrides[f.id] || f.status);
             return `
         <tr>
           <td><i class="swatch ${f.class === "technical" ? "tech" : "subst"}"></i> <strong>${escapeHtml(
             f.title
-          )}</strong><div class="note">Status: ${escapeHtml(status)}</div></td>
+          )}</strong><div class="note">Status: ${escapeHtml(st)}</div></td>
           <td>${escapeHtml(f.detail)}</td>
         </tr>`;
           })
           .join("")
-      : `<tr><td colspan="2">No findings in this section yet.</td></tr>`;
-
-  const statusMeta = emp.errors
-    ? `<span class="err">${emp.errors} Errors Found</span>`
-    : `<span>No errors recorded yet</span>`;
-
-  const dateMeta = emp.completedOn
-    ? `Audit Completed on ${formatDisplayDate(emp.completedOn)}`
-    : "Awaiting Form I-9 analysis";
+      : `<tr><td colspan="2">${
+          emp.analysisStatus === "completed"
+            ? "No findings in this section."
+            : "No findings in this section yet."
+        }</td></tr>`;
 
   const root = el(`
-  <section>
+  <section data-employee-id="${escapeAttr(emp.id)}" data-audit-id="${escapeAttr(audit?.id || "")}">
     <div class="crumbs">
       <button type="button" data-list>I-9 Audits</button> &gt;
       <button type="button" data-audit>${escapeHtml(emp.name)}</button>
@@ -74,7 +101,12 @@ export function renderAssistView({
       <div>
         <h1 class="page-title">${escapeHtml(emp.name)}'s I-9 Audit Notes</h1>
         <div class="meta">
-          ${dateMeta} • ${statusMeta}
+          ${
+            emp.completedOn
+              ? `Audit Completed on ${formatDisplayDate(emp.completedOn)}`
+              : escapeHtml(status.meta)
+          } •
+          <span class="${status.metaClass || ""}">${escapeHtml(status.meta)}</span>
         </div>
       </div>
       <div style="display:flex;gap:8px">
@@ -93,10 +125,13 @@ export function renderAssistView({
           )}</span></div>
           <table class="info-table">
             <tr><td>Employee Name</td><td>${escapeHtml(emp.name)}</td></tr>
-            <tr><td>Purpose</td><td>${escapeHtml(pack.purpose)}</td></tr>
+            <tr><td>Employee ID</td><td>${escapeHtml(emp.id)}</td></tr>
+            <tr><td>Audit ID</td><td>${escapeHtml(pack.auditId || audit?.id || "—")}</td></tr>
+            <tr><td>Purpose</td><td>${escapeHtml(pack.purpose || "—")}</td></tr>
             <tr><td>Department</td><td>${escapeHtml(emp.department || "—")}</td></tr>
-            <tr><td>Reviewed By</td><td>${escapeHtml(pack.reviewedBy)}</td></tr>
+            <tr><td>Reviewed By</td><td>${escapeHtml(pack.reviewedBy || "—")}</td></tr>
             <tr><td>Organization</td><td>${escapeHtml(audit?.name || "—")}</td></tr>
+            <tr><td>Findings Count</td><td>${emp.analysisStatus === "completed" ? emp.errors : "—"}</td></tr>
             <tr><td>Imported Documents</td><td class="doc-links">${docLinks}</td></tr>
           </table>
           <p style="font-size:13px;line-height:1.5;color:#374151">
@@ -112,12 +147,8 @@ export function renderAssistView({
             <tbody>${sectionRows(pack.section1)}</tbody>
           </table>
           <div class="rec-box">
-            <div class="warn">${escapeHtml(pack.recommendation)}</div>
-            <ul>
-              <li>Enter N/A in unused Section 1 fields where appropriate.</li>
-              <li>Do not backdate signatures; use the actual correction date with initials.</li>
-              <li>Ensure attestation citizenship/immigration status is checked correctly.</li>
-            </ul>
+            <div class="warn">${escapeHtml(pack.recommendation || "—")}</div>
+            <ul>${remediationItems}</ul>
           </div>
           <h4>Section 2 Errors</h4>
           <table class="err-table">
@@ -129,7 +160,7 @@ export function renderAssistView({
 
       <aside class="assist">
         ${state.agentBusy && state.agentStatus ? statusBar(state.agentStatus) : ""}
-        ${state.chatStarted ? chatPanel(state) : idlePanel()}
+        ${state.chatStarted ? chatPanel(state) : idlePanel(emp.name, emp.errors)}
         <div class="composer">
           <div class="composer-row">
             <input id="ask" placeholder="Ask your question" ${state.agentBusy ? "disabled" : ""} />
@@ -150,10 +181,15 @@ export function renderAssistView({
     btn.addEventListener("click", () => onOpenDocument(btn.getAttribute("data-open-doc")))
   );
   root.querySelector("[data-download]")?.addEventListener("click", () => {
-    const names = docs.map((d) => d.name).join(", ") || "—";
+    const names = docNames.join(", ") || "—";
+    const findingLines = openFindings.map((f) => `- [${f.section}] ${f.title}: ${f.detail}`).join("\n");
     const blob = new Blob(
       [
-        `I-9 Audit Notes\nEmployee: ${emp.name}\nDocuments: ${names}\nErrors: ${emp.errors}\nRecommendation: ${pack.recommendation}\n`,
+        `I-9 Audit Notes\nAudit ID: ${pack.auditId || audit?.id || "—"}\nEmployee: ${emp.name} (${emp.id})\nOrganization: ${
+          audit?.name || "—"
+        }\nDocuments: ${names}\nErrors: ${emp.errors}\nRecommendation: ${pack.recommendation}\nFindings:\n${
+          findingLines || "(none)"
+        }\n`,
       ],
       { type: "text/plain" }
     );
@@ -182,11 +218,13 @@ function statusBar(text) {
   return `<div class="assist-status"><span class="spinner" aria-hidden="true"></span>${escapeHtml(text)}</div>`;
 }
 
-function idlePanel() {
+function idlePanel(employeeName, errorCount) {
   return `
   <div class="assist-idle" id="assist-idle">
     ${icons.assistArt}
-    <p>Ask <strong>OnBlick Audit Assistant</strong> to help you correct this employee's Form I-9 based on the errors identified in the audit.</p>
+    <p>Ask <strong>OnBlick Audit Assistant</strong> to help you correct <strong>${escapeHtml(
+      employeeName
+    )}</strong>'s Form I-9 based on the ${Number(errorCount) || 0} error(s) identified in this audit.</p>
     <button class="btn btn-outline" type="button" id="start-correction">✨ Start Correction Recommendation</button>
   </div>`;
 }
@@ -213,8 +251,11 @@ function chatPanel(state) {
 }
 
 function escapeHtml(s) {
-  return String(s)
+  return String(s ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+}
+function escapeAttr(s) {
+  return escapeHtml(s).replaceAll('"', "&quot;");
 }

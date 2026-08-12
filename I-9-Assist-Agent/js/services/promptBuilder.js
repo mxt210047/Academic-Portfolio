@@ -11,8 +11,11 @@ export function buildAgentPrompt({ intent, userText, employee, findings, openFin
     userText,
     context: {
       employeeName: employee?.name,
+      employeeId: employee?.id,
       department: employee?.department,
       errorCount: employee?.errors,
+      documentNames: findings?.documentNames || employee?.documents?.map((d) => (typeof d === "string" ? d : d.name)) || [],
+      auditId: findings?.auditId || null,
       openFindingCount: openFindings.length,
       technicalCount: openFindings.filter((f) => f.class === "technical").length,
       substantiveCount: openFindings.filter((f) => f.class === "substantive").length,

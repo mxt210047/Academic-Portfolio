@@ -1,7 +1,7 @@
 /**
  * Local Form I-9 packet analysis over imported documents.
- * Uses only the selected audit's roster + files registered in mockData.js.
- * Swap analyzeEmployee body for a real OnBlick/parsing API later.
+ * Input: live audit roster + mockData document registry.
+ * Output: findings attached to each employee (Document Analysis source).
  */
 
 import { getImportedDocument } from "../data/mockData.js";
@@ -30,10 +30,13 @@ function finding(id, section, cls, title, detail) {
 
 /**
  * Analyze one employee packet from imported documents only.
+ * @param {object} employee live roster row
+ * @param {{ auditId?: string, organizationName?: string }} ctx
  */
-export function analyzeEmployee(employee) {
+export function analyzeEmployee(employee, ctx = {}) {
   const docs = employee.documents || [];
   const names = docs.map(docName);
+  const displayNames = docs.map((d) => (typeof d === "string" ? d : d?.name || "document"));
   const section1 = [];
   const section2 = [];
   const now = new Date().toISOString();
@@ -61,7 +64,7 @@ export function analyzeEmployee(employee) {
           "Section 1",
           "substantive",
           "Form I-9 not identified",
-          `Imported files (${names.join(", ") || "none"}) do not include a clear Form I-9 filename. Rename or add the Form I-9 scan.`
+          `Imported files (${displayNames.join(", ")}) do not include a clear Form I-9 filename. Rename or add the Form I-9 scan.`
         )
       );
     }
@@ -73,7 +76,7 @@ export function analyzeEmployee(employee) {
           "Section 2",
           "technical",
           "Supporting List A/B/C document missing",
-          "Only the Form I-9 appears in this packet. Attach the retained List A or List B+C supporting copy."
+          `Only the Form I-9 appears in ${employee.name}'s packet (${displayNames.join(", ")}). Attach the retained List A or List B+C supporting copy.`
         )
       );
     }
@@ -85,16 +88,14 @@ export function analyzeEmployee(employee) {
           "Section 2",
           "substantive",
           "Receipt follow-up not documented",
-          "A receipt file is present but no replacement identity document was imported with this packet."
+          `A receipt file is present for ${employee.name} but no replacement identity document was imported with this packet.`
         )
       );
     }
 
-    // Inspect text bodies when available (text imports / readable blobs)
     for (const d of docs) {
       const meta = d?.id ? getImportedDocument(d.id) : null;
       if (!meta || (meta.kind !== "text" && !meta.type?.startsWith("text/"))) continue;
-      // Structural note only — binary PDF OCR is out of scope without parsing API
       if (meta.size != null && meta.size < 40) {
         section1.push(
           finding(
@@ -102,14 +103,14 @@ export function analyzeEmployee(employee) {
             "Section 1",
             "technical",
             "Document appears empty or truncated",
-            `${meta.name} is unusually small (${meta.sizeLabel || meta.size + " B"}). Re-scan or re-upload a complete page.`
+            `${meta.name} for ${employee.name} is unusually small (${meta.sizeLabel || meta.size + " B"}). Re-scan or re-upload a complete page.`
           )
         );
       }
     }
 
     if (hasI9 && docs.length >= 2 && !section1.length && !section2.length) {
-      // Clean packet relative to available local checks
+      // Clean relative to local packet checks
     } else if (!section1.length && !section2.length && docs.length) {
       section2.push(
         finding(
@@ -117,7 +118,9 @@ export function analyzeEmployee(employee) {
           "Section 2",
           "technical",
           "Manual completeness review recommended",
-          `Analyzed ${docs.length} imported file(s) for ${employee.name}. No automated Form I-9 field OCR is connected yet; confirm Section 1/2 completeness on the retained scans.`
+          `Analyzed ${docs.length} imported file(s) for ${employee.name} (${displayNames.join(
+            ", "
+          )}). Field-level OCR is not connected; confirm Section 1/2 completeness on the retained scans.`
         )
       );
     }
@@ -125,8 +128,8 @@ export function analyzeEmployee(employee) {
 
   const errors = section1.length + section2.length;
   const recommendation = errors
-    ? `Correct ${errors} finding(s) for ${employee.name} using the imported packet, then initial and date changes with today's date (do not backdate).`
-    : `No automated findings for ${employee.name}. Retain the Form I-9 per policy and re-run when the full parsing API is connected.`;
+    ? `Correct ${errors} finding(s) for ${employee.name} using the imported packet (${displayNames.join(", ") || "no files"}), then initial and date changes with today's date (do not backdate).`
+    : `No automated findings for ${employee.name}. Retain the Form I-9 per policy.`;
 
   return {
     ...employee,
@@ -135,8 +138,13 @@ export function analyzeEmployee(employee) {
     auditDate: now.slice(0, 10),
     completedOn: now,
     findings: {
-      purpose: "Form I-9 corrections",
-      reviewedBy: "OnBlick Audit Agent (local analysis)",
+      purpose: ctx.organizationName
+        ? `Form I-9 corrections — ${ctx.organizationName}`
+        : "Form I-9 corrections",
+      reviewedBy: "OnBlick Audit Agent",
+      auditId: ctx.auditId || null,
+      employeeId: employee.id,
+      documentNames: displayNames,
       section1,
       section2,
       recommendation,
@@ -145,14 +153,16 @@ export function analyzeEmployee(employee) {
 }
 
 /**
- * Run analysis across an audit roster. Calls onProgress(employeeName, index, total).
+ * Run analysis across an audit roster.
  */
-export async function analyzeAudit(audit, { onProgress } = {}) {
+export async function analyzeAudit(audit, { onProgress, signal } = {}) {
   const roster = audit.roster || [];
   const total = roster.length;
   const nextRoster = [];
+  const ctx = { auditId: audit.id, organizationName: audit.name };
 
   for (let i = 0; i < roster.length; i++) {
+    if (signal?.aborted) throw new Error("Analysis cancelled");
     const emp = roster[i];
     onProgress?.({
       employeeName: emp.name,
@@ -160,9 +170,9 @@ export async function analyzeAudit(audit, { onProgress } = {}) {
       total,
       status: `Analyzing ${emp.name} (${i + 1}/${total || 1})`,
     });
-    // Mark analyzing briefly in caller via progress; simulate work per packet size
-    await delay(280 + Math.min(400, (emp.docs || 1) * 60));
-    nextRoster.push(analyzeEmployee({ ...emp, analysisStatus: "analyzing" }));
+    await delay(200 + Math.min(300, (emp.docs || 1) * 40));
+    if (signal?.aborted) throw new Error("Analysis cancelled");
+    nextRoster.push(analyzeEmployee({ ...emp, analysisStatus: "analyzing" }, ctx));
   }
 
   onProgress?.({
@@ -171,7 +181,7 @@ export async function analyzeAudit(audit, { onProgress } = {}) {
     total,
     status: "Finalizing audit results",
   });
-  await delay(220);
+  await delay(120);
 
   return {
     ...audit,
