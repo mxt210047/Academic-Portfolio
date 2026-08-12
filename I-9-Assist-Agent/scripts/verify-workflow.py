@@ -68,7 +68,6 @@ def main() -> int:
                 }
                 for name, rel, buf in payloads
             ]
-            print("UPLOADING", [f["baseName"] for f in files_js])
             page.evaluate(
                 """(files) => {
                   const input = document.querySelector('#folder-input');
@@ -83,12 +82,10 @@ def main() -> int:
                   }
                   Object.defineProperty(input, 'files', { configurable: true, value: dt.files });
                   input.dispatchEvent(new Event('change', { bubbles: true }));
-                  return Array.from(input.files).map(x => ({ name: x.name, rel: x.webkitRelativePath }));
                 }""",
                 files_js,
             )
             page.wait_for_timeout(400)
-            print("FOLDER ROW", page.locator(".folder-row").inner_text() if page.locator(".folder-row").count() else "none")
             page.wait_for_selector(".folder-row", timeout=15000)
             page.screenshot(path=str(OUT / "02-import.png"), full_page=True)
             page.click("[data-initiate]")
