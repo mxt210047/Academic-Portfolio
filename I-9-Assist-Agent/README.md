@@ -42,6 +42,10 @@ I-9-Assist-Agent/
 4. Click **Documents** (or a file name on Audit Notes) → document preview page
 5. Open employee → Audit Notes + **OnBlick Audit Assistant**
 
+After **YES, CONFIRM**, local analysis runs over the imported packet:
+employee rows move from Pending/Analyzing → **Errors Found** or **No Errors Found**,
+and the audit status becomes **Completed**.
+
 ## Run
 
 ```bash
