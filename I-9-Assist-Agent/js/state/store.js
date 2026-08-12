@@ -20,6 +20,7 @@ const state = {
   confirmAuditId: null,
   agentStatus: null,
   agentBusy: false,
+  agentPanelOpen: false, // widget launcher closed → open mounts existing agent panel
   auditBusy: false,
   auditProgress: null, // user-facing analysis status string
   chatStarted: false,

@@ -226,6 +226,16 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .rec-box .warn { color: var(--danger); font-weight: 700; }
 
 .assist { border-color: var(--blue-border); background: linear-gradient(#fff, #f8faff); }
+.assist-slot { min-height: 0; display: flex; flex-direction: column; }
+.assist-slot:empty { display: none; }
+.analysis-split.agent-collapsed { grid-template-columns: 1fr; }
+.assist-panel-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-bottom: 1px solid var(--line); background: #fff;
+}
+.assist-panel-head strong { font-size: 14px; color: #1e3a8a; }
+.assist-context-line { margin-top: 2px; max-width: 260px; }
+.assist-panel-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .assist-idle {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 24px 20px 12px; gap: 12px;
@@ -243,6 +253,29 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .assist-chat {
   flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;
 }
+
+/* AI Agent widget launcher (closed state) */
+.ai-agent-widget-host {
+  position: fixed; right: 20px; bottom: 20px; z-index: 55;
+}
+.ai-agent-widget {
+  display: flex; align-items: center; gap: 12px; max-width: 340px;
+  padding: 12px 16px 12px 12px; border: 1px solid var(--blue-border); border-radius: 999px;
+  background: linear-gradient(180deg, #fff, #f0f4ff); box-shadow: var(--shadow);
+  color: #1e3a8a; cursor: pointer; text-align: left; font: inherit;
+  animation: fadeUp .25s ease both;
+}
+.ai-agent-widget:hover { border-color: var(--blue); box-shadow: 0 8px 24px rgba(74,109,217,.2); }
+.ai-agent-widget-icon {
+  width: 40px; height: 40px; border-radius: 999px; background: var(--blue); color: #fff;
+  display: grid; place-items: center; font-size: 18px; flex-shrink: 0;
+}
+.ai-agent-widget-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ai-agent-widget-title { font-size: 13px; font-weight: 700; }
+.ai-agent-widget-sub {
+  font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px;
+}
+
 .bubble {
   max-width: 92%; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45;
   animation: fadeUp .3s ease both;
@@ -319,7 +352,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 }
 
 .toast-host {
-  position: fixed; right: 16px; bottom: 16px; z-index: 60; display: flex; flex-direction: column; gap: 8px;
+  position: fixed; right: 16px; bottom: 88px; z-index: 60; display: flex; flex-direction: column; gap: 8px;
 }
 .toast {
   background: #111827; color: #fff; padding: 12px 14px; border-radius: 8px; font-size: 13px;

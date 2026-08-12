@@ -237,6 +237,21 @@ def main() -> int:
                 assert_("A/B classification differs", class_a != class_b, f"{class_a} vs {class_b}")
                 page.screenshot(path=str(OUT / "03-doc-b.png"), full_page=True)
 
+                # Widget: close existing agent → launcher → reopen with same document context
+                if page.locator("[data-close-agent]").count():
+                    page.locator("[data-close-agent]").click()
+                    page.wait_for_timeout(200)
+                assert_("Widget launcher after close", page.locator("[data-open-agent]").count() > 0)
+                bound_before = page.get_attribute("[data-bound-document-id]", "data-bound-document-id")
+                page.locator("[data-open-agent]").click()
+                page.wait_for_selector("[data-ai-agent-panel]", timeout=5000)
+                assert_("Agent panel reopened from widget", page.locator("[data-ai-agent-panel]").count() > 0)
+                panel_doc = page.get_attribute("[data-ai-agent-panel]", "data-document-id")
+                bound_after = page.get_attribute("[data-bound-document-id]", "data-bound-document-id")
+                assert_("Widget reopen keeps document binding", bound_before == bound_after, f"{bound_before}→{bound_after}")
+                assert_("Agent panel context documentId matches", panel_doc == bound_after, f"panel={panel_doc}")
+                page.screenshot(path=str(OUT / "03b-widget.png"), full_page=True)
+
                 # --- Rename test: same I-9 bytes, misleading filename ---
                 page.goto(BASE, wait_until="networkidle")
                 # New browser context for clean store

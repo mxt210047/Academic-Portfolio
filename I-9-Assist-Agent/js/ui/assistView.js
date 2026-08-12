@@ -1,4 +1,4 @@
-import { el, icons } from "../utils/dom.js";
+import { el } from "../utils/dom.js";
 import {
   getSelectedAudit,
   getSelectedEmployee,
@@ -19,16 +19,19 @@ import {
   findingStatusLabel,
 } from "../services/statusMap.js";
 import { renderDocumentPreview } from "./documentPreview.js";
+import { renderAiAgentPanel } from "./aiAgentPanel.js";
 
 /**
  * Document Analysis / Audit Notes — live document viewer + complete findings
  * for the currently selected document on the selected employee.
+ * AI Agent is launched via widget → existing panel (open/close without losing audit state).
  */
 export function renderAssistView({
   onBackToList,
   onBackToAudit,
   onOpenDocument,
   onSelectAnalysisDocument,
+  onCloseAgent,
   onStartCorrection,
   onSend,
   onApprove,
@@ -168,7 +171,7 @@ export function renderAssistView({
         <button class="btn btn-primary btn-sm" type="button" data-download>DOWNLOAD</button>
       </div>
     </div>
-    <div class="split analysis-split">
+    <div class="split analysis-split ${state.agentPanelOpen ? "" : "agent-collapsed"}">
       <section class="editor">
         <div class="editor-toolbar" aria-label="Formatting">
           ${["B","I","U","•","1.","≡","A","🖍","{}","#"].map((t) => `<button type="button">${t}</button>`).join("")}
@@ -325,23 +328,36 @@ export function renderAssistView({
           </p>
         </div>
       </section>
-
-      <aside class="assist">
-        ${state.agentBusy && state.agentStatus ? statusBar(state.agentStatus) : ""}
-        ${state.chatStarted ? chatPanel(state) : idlePanel(emp.name, docFindingCount, selectedDoc?.name)}
-        <div class="composer">
-          <div class="composer-row">
-            <input id="ask" placeholder="Ask your question" ${state.agentBusy ? "disabled" : ""} />
-            <button class="icon-btn" type="button" title="Voice" aria-label="Voice" disabled>🎤</button>
-            <button class="send" id="send" type="button" title="Send" aria-label="Send" ${
-              state.agentBusy ? "disabled" : ""
-            }>↑</button>
-          </div>
-          <div class="disclaimer">OnBlick Assistant may make mistakes. Please review its responses carefully. <a href="#" data-feedback>Share your feedback</a></div>
-        </div>
-      </aside>
+      <div class="assist-slot" data-assist-slot></div>
     </div>
   </section>`);
+
+  const slot = root.querySelector("[data-assist-slot]");
+  if (state.agentPanelOpen && slot) {
+    slot.appendChild(
+      renderAiAgentPanel({
+        employeeName: emp.name,
+        documentName: selectedDoc?.name || null,
+        docFindingCount,
+        auditId: audit?.id || pack.auditId || null,
+        employeeId: emp.id,
+        documentId: selectedDocId,
+        agentBusy: state.agentBusy,
+        agentStatus: state.agentStatus,
+        chatStarted: state.chatStarted,
+        messages: state.messages,
+        onClose: onCloseAgent,
+        onMinimize: onCloseAgent,
+        onStartCorrection,
+        onSend,
+        onApprove,
+        onReject,
+        onRegenerate,
+        onFeedback: () =>
+          alert("Thank you — feedback for OnBlick Audit Assistant can be shared with your OnBlick administrator."),
+      })
+    );
+  }
 
   root.querySelector("[data-list]").addEventListener("click", onBackToList);
   root.querySelector("[data-audit]").addEventListener("click", onBackToAudit);
@@ -388,62 +404,7 @@ export function renderAssistView({
       alert(summary);
     }
   });
-  root.querySelector("[data-feedback]")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    alert("Thank you — feedback for OnBlick Audit Assistant can be shared with your OnBlick administrator.");
-  });
-  root.querySelector("#start-correction")?.addEventListener("click", onStartCorrection);
-  root.querySelector("#send")?.addEventListener("click", () => {
-    const input = root.querySelector("#ask");
-    onSend(input?.value || "");
-  });
-  root.querySelector("#ask")?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") onSend(e.target.value || "");
-  });
-  root.querySelector("[data-approve]")?.addEventListener("click", onApprove);
-  root.querySelector("[data-reject]")?.addEventListener("click", onReject);
-  root.querySelector("[data-regen]")?.addEventListener("click", onRegenerate);
   return root;
-}
-
-function statusBar(text) {
-  return `<div class="assist-status"><span class="spinner" aria-hidden="true"></span>${escapeHtml(text)}</div>`;
-}
-
-function idlePanel(employeeName, docErrors, docName) {
-  const count = Number(docErrors) || 0;
-  const focus = docName
-    ? `correct <strong>${escapeHtml(employeeName)}</strong>'s <strong>${escapeHtml(docName)}</strong>`
-    : `correct <strong>${escapeHtml(employeeName)}</strong>'s Form I-9`;
-  return `
-  <div class="assist-idle" id="assist-idle">
-    ${icons.assistArt}
-    <p>Ask <strong>OnBlick Audit Assistant</strong> to help you ${focus} based on the <strong>${count}</strong> error${
-      count === 1 ? "" : "s"
-    } identified for this document.</p>
-    <button class="btn btn-outline" type="button" id="start-correction">✨ Start Correction Recommendation</button>
-  </div>`;
-}
-
-function chatPanel(state) {
-  const msgs = state.messages
-    .map((m) => {
-      const actions =
-        m.kind === "recommendation"
-          ? `<div class="rec-actions">
-              <button class="btn btn-primary btn-sm" type="button" data-approve>Approve</button>
-              <button class="btn btn-danger-outline btn-sm" type="button" data-reject>Reject</button>
-              <button class="btn btn-outline btn-sm" type="button" data-regen>Regenerate</button>
-            </div>`
-          : "";
-      return `<div class="bubble ${m.role}">
-        <span class="tag">${m.role === "bot" ? "OnBlick Audit Assistant" : "You"}</span>
-        <div>${m.html || escapeHtml(m.text)}</div>
-        ${actions}
-      </div>`;
-    })
-    .join("");
-  return `<div class="assist-chat" id="assist-chat">${msgs}</div>`;
 }
 
 function escapeHtml(s) {
