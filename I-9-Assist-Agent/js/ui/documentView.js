@@ -79,6 +79,9 @@ function renderPreview(doc) {
   if (doc.kind === "image") {
     return `<div class="doc-image-wrap"><img class="doc-image" alt="${escapeAttr(doc.name)}" src="${doc.url}" /></div>`;
   }
+  if (doc.kind === "text") {
+    return `<iframe class="doc-frame doc-frame-text" title="${escapeAttr(doc.name)}" src="${doc.url}"></iframe>`;
+  }
   return `
     <div class="doc-fallback">
       <h2>Preview not available in-browser</h2>

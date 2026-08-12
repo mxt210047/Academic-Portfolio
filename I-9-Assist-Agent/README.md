@@ -14,8 +14,9 @@ I-9-Assist-Agent/
   css/styles.css
   js/
     main.js                      # app wiring / workflow
-    data/models.js               # audit/employee builders (no seeded catalogs)
-    data/importedDocuments.js    # registry of uploaded docs + preview URLs
+    data/mockData.js             # importable document packets
+    data/models.js               # audit builders from packages
+    data/importedDocuments.js    # registry of uploaded/mock docs + preview URLs
     state/store.js               # session state from imports only
     services/
       fileImport.js              # choose files / folder / drag-drop → packages
@@ -29,10 +30,10 @@ I-9-Assist-Agent/
 
 ## Data rules
 
-- Starts empty — no mock employees, folders, or findings
-- Roster comes only from imported files/folders
-- Each upload is registered in `importedDocuments.js` and openable on the document page
-- Findings stay empty until a real audit/parsing API attaches them
+- Starts empty until you import
+- Import from **mockData.js packets** (selectable in the modal) or real files/folders
+- Each import is registered in `importedDocuments.js` and openable on the document page
+- Mock packets can include findings; file-only imports start with empty findings
 
 ## Workflow
 

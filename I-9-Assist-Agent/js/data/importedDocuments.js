@@ -23,13 +23,15 @@ const byId = new Map();
  * @property {File} [file]          session-local File (not serialized)
  */
 
-function detectKind(name, mime = "") {
+function detectKind(name, mime = "", previewAsText = false) {
+  if (previewAsText || mime.startsWith("text/")) return "text";
   const ext = extensionOf(name);
   if (ext === "pdf" || mime.includes("pdf")) return "pdf";
   if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext) || mime.startsWith("image/")) return "image";
   if (["doc", "docx"].includes(ext) || mime.includes("word") || mime.includes("officedocument")) {
     return "office";
   }
+  if (ext === "txt") return "text";
   return "other";
 }
 
@@ -51,6 +53,7 @@ export function registerImportedDocument({
   file,
   packageId,
   employeeName,
+  previewAsText = false,
 }) {
   const existing = byId.get(id);
   if (existing?.url) URL.revokeObjectURL(existing.url);
@@ -65,7 +68,7 @@ export function registerImportedDocument({
     packageId,
     employeeName,
     url,
-    kind: detectKind(name, type || file.type || ""),
+    kind: detectKind(name, type || file.type || "", previewAsText),
     importedAt: new Date().toISOString(),
     file,
   };
@@ -87,6 +90,7 @@ export function registerPackageDocuments(pkg) {
         file: d.file,
         packageId: pkg.id,
         employeeName: emp.name,
+        previewAsText: Boolean(d.previewAsText),
       });
       return { id, name: d.name, relativePath: d.relativePath || d.name, size: d.size ?? d.file?.size ?? 0 };
     });

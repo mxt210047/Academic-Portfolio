@@ -1,14 +1,9 @@
 /**
- * Domain helpers for audits built from user imports.
- * No seeded employees, folders, or findings.
+ * Domain helpers for audits built from imported packages
+ * (mockData folders or user file uploads).
  */
 
-export const currentUser = {
-  id: "session-user",
-  name: "Signed-in user",
-  initials: "SU",
-  role: "HR",
-};
+export { currentUser } from "./mockData.js";
 
 export function emptyFindings() {
   return {
@@ -26,7 +21,12 @@ export function getFindingsForEmployee(employee) {
   return employee.findings || emptyFindings();
 }
 
-/** Build an audit record from an imported package (files/folders only). */
+function countOpenFindings(findings) {
+  if (!findings) return 0;
+  return (findings.section1?.length || 0) + (findings.section2?.length || 0);
+}
+
+/** Build an audit record from an imported package. */
 export function buildAuditFromImport(pkg, orgName) {
   const now = new Date();
   const roster = (pkg.employees || []).map((e, i) => {
@@ -36,17 +36,19 @@ export function buildAuditFromImport(pkg, orgName) {
         : { id: d.id, name: d.name, relativePath: d.relativePath, size: d.size }
     );
     const documentIds = e.documentIds || docs.map((d) => d.id).filter(Boolean);
+    const findings = e.findings || emptyFindings();
+    const errors = e.errors != null ? e.errors : countOpenFindings(findings);
     return {
       id: `emp-${pkg.id}-${i}`,
       name: e.name,
-      department: "",
+      department: e.department || "",
       docs: docs.length || e.documentCount || 0,
-      errors: 0,
+      errors,
       documents: docs,
       documentIds,
-      auditDate: null,
-      completedOn: null,
-      findings: emptyFindings(),
+      auditDate: e.auditDate || null,
+      completedOn: e.completedOn || null,
+      findings,
     };
   });
 
@@ -61,7 +63,7 @@ export function buildAuditFromImport(pkg, orgName) {
     fileNames: pkg.fileNames || [],
     documentIds: pkg.documentIds || roster.flatMap((r) => r.documentIds),
     roster,
-    status: "Not Initiated", // Not Initiated | In Progress | Completed
+    status: "Not Initiated",
     initiatedAt: null,
     initiatedBy: null,
     createdAt: now.toISOString(),

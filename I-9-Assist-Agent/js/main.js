@@ -17,6 +17,7 @@ import {
   toast,
 } from "./state/store.js";
 import { buildAuditFromImport } from "./data/models.js";
+import { availableFolders, materializeMockPackage } from "./data/mockData.js";
 import {
   registerPackageDocuments,
   revokePackageDocuments,
@@ -41,6 +42,18 @@ function openImport() {
 
 function closeImport() {
   setState({ showImport: false });
+}
+
+function addMockFolder(folderId) {
+  const folder = availableFolders.find((f) => f.id === folderId);
+  if (!folder) return;
+  if (getState().selectedFolders.some((f) => f.mockFolderId === folder.id)) {
+    toast("Packet already selected", "warn");
+    return;
+  }
+  const pkg = registerPackageDocuments(materializeMockPackage(folder));
+  setState({ selectedFolders: [...getState().selectedFolders, pkg] });
+  toast(`Imported “${pkg.name}” (${pkg.documentCount} docs from mockData)`, "success");
 }
 
 function addImportedFiles(fileList) {
@@ -366,6 +379,7 @@ function render() {
       renderImportModal({
         onClose: closeImport,
         onOrgChange: (v) => setState({ orgNameDraft: v }),
+        onAddMockFolder: addMockFolder,
         onFilesSelected: addImportedFiles,
         onRemoveFolder: removeFolder,
         onSaveLater: saveLater,
