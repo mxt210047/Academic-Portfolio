@@ -13,36 +13,34 @@ I-9-Assist-Agent/
   index.html
   css/styles.css
   js/
-    main.js                      # app wiring / workflow
-    data/mockData.js             # importable document packets
-    data/models.js               # audit builders from packages
-    data/importedDocuments.js    # registry of uploaded/mock docs + preview URLs
-    state/store.js               # session state from imports only
+    main.js                      # wires UI; reads/writes import data via mockData.js
+    data/mockData.js             # LIVE store of imported packages + documents (starts empty)
+    data/models.js               # builds audits from mockData packages
+    data/importedDocuments.js    # thin re-export of mockData document helpers
+    state/store.js
     services/
-      fileImport.js              # choose files / folder / drag-drop → packages
+      fileImport.js              # FileList → package/employee/document structure
       intent.js
       promptBuilder.js
       aiAgent.js
     ui/
-      documentView.js            # page to open/preview an imported document
+      documentView.js            # open/preview an imported document
       ...
 ```
 
 ## Data rules
 
-- Starts empty until you import
-- Import from **mockData.js packets** (selectable in the modal) or real files/folders
-- Each import is registered in `importedDocuments.js` and openable on the document page
-- Mock packets can include findings; file-only imports start with empty findings
+- `mockData.js` starts empty — no seeded employees, folders, or findings
+- Choose files / folder / drag-drop writes into `mockData.js`
+- `main.js` builds audits and opens documents from that live import data only
 
 ## Workflow
 
 1. Empty state → **Import I-9 Documents**
-2. Choose org + files/folder → **Save & Audit Later** or **Initiate Audit**
+2. Choose org + your files/folder → **Save & Audit Later** or **Initiate Audit**
 3. Confirm initiate → employee table from import structure
 4. Click **Documents** (or a file name on Audit Notes) → document preview page
 5. Open employee → Audit Notes + **OnBlick Audit Assistant**
-6. Start correction / chat → Approve · Reject · Regenerate
 
 ## Run
 

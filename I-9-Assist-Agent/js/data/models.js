@@ -1,9 +1,11 @@
 /**
- * Domain helpers for audits built from imported packages
- * (mockData folders or user file uploads).
+ * Domain helpers for audits built from packages in mockData.js
+ * (populated only by user imports).
  */
 
-export { currentUser } from "./mockData.js";
+import { currentUser } from "./mockData.js";
+
+export { currentUser };
 
 export function emptyFindings() {
   return {
@@ -21,12 +23,7 @@ export function getFindingsForEmployee(employee) {
   return employee.findings || emptyFindings();
 }
 
-function countOpenFindings(findings) {
-  if (!findings) return 0;
-  return (findings.section1?.length || 0) + (findings.section2?.length || 0);
-}
-
-/** Build an audit record from an imported package. */
+/** Build an audit record from an import package held in mockData. */
 export function buildAuditFromImport(pkg, orgName) {
   const now = new Date();
   const roster = (pkg.employees || []).map((e, i) => {
@@ -36,19 +33,17 @@ export function buildAuditFromImport(pkg, orgName) {
         : { id: d.id, name: d.name, relativePath: d.relativePath, size: d.size }
     );
     const documentIds = e.documentIds || docs.map((d) => d.id).filter(Boolean);
-    const findings = e.findings || emptyFindings();
-    const errors = e.errors != null ? e.errors : countOpenFindings(findings);
     return {
       id: `emp-${pkg.id}-${i}`,
       name: e.name,
       department: e.department || "",
       docs: docs.length || e.documentCount || 0,
-      errors,
+      errors: 0,
       documents: docs,
       documentIds,
-      auditDate: e.auditDate || null,
-      completedOn: e.completedOn || null,
-      findings,
+      auditDate: null,
+      completedOn: null,
+      findings: emptyFindings(),
     };
   });
 

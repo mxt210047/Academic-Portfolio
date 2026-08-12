@@ -77,7 +77,7 @@ export function renderAuditDetail({
             <td>${
               e.errors
                 ? `<span class="badge badge-danger">${e.errors} Errors Found</span>`
-                : `<span class="badge badge-ok">No Errors Found</span>`
+                : `<span class="badge badge-muted">Pending analysis</span>`
             }</td>
             <td><button class="icon-btn" type="button" data-note="${e.id}" title="Open audit notes">📄</button></td>
           </tr>`;

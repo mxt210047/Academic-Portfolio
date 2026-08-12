@@ -17,11 +17,12 @@ import {
   toast,
 } from "./state/store.js";
 import { buildAuditFromImport } from "./data/models.js";
-import { availableFolders, materializeMockPackage } from "./data/mockData.js";
 import {
-  registerPackageDocuments,
-  revokePackageDocuments,
-} from "./data/importedDocuments.js";
+  addPackage,
+  clearPackages,
+  getPackages,
+  removePackageAt,
+} from "./data/mockData.js";
 import { runAgentTurn, startCorrectionRecommendation } from "./services/aiAgent.js";
 import { packagesFromFiles } from "./services/fileImport.js";
 
@@ -32,11 +33,15 @@ const toastRoot = document.getElementById("toast-root");
 
 renderHeader(headerRoot);
 
+function syncSelectedFromMockData() {
+  setState({ selectedFolders: getPackages() });
+}
+
 function openImport() {
   setState({
     showImport: true,
     orgNameDraft: getState().orgNameDraft || "",
-    selectedFolders: getState().selectedFolders || [],
+    selectedFolders: getPackages(),
   });
 }
 
@@ -44,56 +49,31 @@ function closeImport() {
   setState({ showImport: false });
 }
 
-function addMockFolder(folderId) {
-  const folder = availableFolders.find((f) => f.id === folderId);
-  if (!folder) return;
-  if (getState().selectedFolders.some((f) => f.mockFolderId === folder.id)) {
-    toast("Packet already selected", "warn");
-    return;
-  }
-  const pkg = registerPackageDocuments(materializeMockPackage(folder));
-  setState({ selectedFolders: [...getState().selectedFolders, pkg] });
-  toast(`Imported “${pkg.name}” (${pkg.documentCount} docs from mockData)`, "success");
-}
-
 function addImportedFiles(fileList) {
   const { packages, errors } = packagesFromFiles(fileList);
   errors.forEach((msg) => toast(msg, "warn"));
   if (!packages.length) return;
 
-  const selected = [...getState().selectedFolders];
   for (const raw of packages) {
-    const pkg = registerPackageDocuments(raw);
-    const existing = selected.findIndex((f) => f.name === pkg.name && f.source === "upload");
-    if (existing >= 0) {
-      revokePackageDocuments(selected[existing].id);
-      selected[existing] = {
-        ...selected[existing],
-        ...pkg,
-        id: pkg.id,
-      };
-    } else {
-      selected.push(pkg);
-    }
+    addPackage(raw);
   }
-  setState({ selectedFolders: selected });
+  syncSelectedFromMockData();
   toast(
     packages.length === 1
-      ? `Imported “${packages[0].name}” (${packages[0].documentCount} docs)`
-      : `Imported ${packages.length} packets`,
+      ? `Imported “${packages[0].name}” (${packages[0].documentCount} docs) into mockData`
+      : `Imported ${packages.length} packets into mockData`,
     "success"
   );
 }
 
 function removeFolder(index) {
-  const selected = [...getState().selectedFolders];
-  const [removed] = selected.splice(index, 1);
-  if (removed?.id) revokePackageDocuments(removed.id);
-  setState({ selectedFolders: selected });
+  removePackageAt(index);
+  syncSelectedFromMockData();
 }
 
 function validateImport() {
-  const { orgNameDraft, selectedFolders } = getState();
+  const orgNameDraft = getState().orgNameDraft;
+  const selectedFolders = getPackages();
   if (!orgNameDraft.trim()) {
     toast("Enter an organization name", "error");
     return false;
@@ -106,7 +86,9 @@ function validateImport() {
 }
 
 function createAuditsFromSelection() {
-  const { orgNameDraft, selectedFolders, audits } = getState();
+  const orgNameDraft = getState().orgNameDraft;
+  const selectedFolders = getPackages();
+  const { audits } = getState();
   const created = selectedFolders.map((folder, i) =>
     buildAuditFromImport(
       folder,
@@ -119,6 +101,7 @@ function createAuditsFromSelection() {
 function saveLater() {
   if (!validateImport()) return;
   const { next } = createAuditsFromSelection();
+  clearPackages();
   setState({
     audits: next,
     selectedFolders: [],
@@ -133,6 +116,7 @@ function saveLater() {
 function initiateFromImport() {
   if (!validateImport()) return;
   const { next, created } = createAuditsFromSelection();
+  clearPackages();
   setState({
     audits: next,
     selectedFolders: [],
@@ -379,7 +363,6 @@ function render() {
       renderImportModal({
         onClose: closeImport,
         onOrgChange: (v) => setState({ orgNameDraft: v }),
-        onAddMockFolder: addMockFolder,
         onFilesSelected: addImportedFiles,
         onRemoveFolder: removeFolder,
         onSaveLater: saveLater,

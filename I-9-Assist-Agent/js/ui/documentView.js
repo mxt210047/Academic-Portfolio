@@ -1,5 +1,5 @@
 import { el } from "../utils/dom.js";
-import { getImportedDocument, getImportedDocuments } from "../data/importedDocuments.js";
+import { getImportedDocument, getImportedDocuments } from "../data/mockData.js";
 import { getSelectedEmployee, getSelectedAudit, getState } from "../state/store.js";
 
 /**

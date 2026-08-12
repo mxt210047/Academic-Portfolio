@@ -1,12 +1,10 @@
 import { el } from "../utils/dom.js";
 import { getState } from "../state/store.js";
-import { availableFolders } from "../data/mockData.js";
 import { formatBytes } from "../services/fileImport.js";
 
 export function renderImportModal({
   onClose,
   onOrgChange,
-  onAddMockFolder,
   onFilesSelected,
   onRemoveFolder,
   onSaveLater,
@@ -14,8 +12,6 @@ export function renderImportModal({
 }) {
   const state = getState();
   const canSubmit = Boolean(state.selectedFolders.length && state.orgNameDraft.trim());
-  const selectedIds = new Set(state.selectedFolders.map((f) => f.mockFolderId).filter(Boolean));
-
   const root = el(`
   <div class="overlay" data-overlay="import">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
@@ -41,21 +37,7 @@ export function renderImportModal({
             <button type="button" class="chip-btn" data-pick-folder>Choose folder</button>
           </div>
         </div>
-        <p class="note">Or select a packet from mockData.js below to import those documents.</p>
-        <div class="mock-pack-list">
-          ${availableFolders
-            .map((f) => {
-              const docs = f.employees.reduce((n, e) => n + e.documents.length, 0);
-              const selected = selectedIds.has(f.id);
-              return `<button type="button" class="chip-btn mock-pack ${selected ? "active" : ""}" data-mock="${f.id}" ${
-                selected ? "disabled" : ""
-              }>
-                📁 ${escapeHtml(f.name)}
-                <span class="note"> · ${f.employees.length} emp · ${docs} docs</span>
-              </button>`;
-            })
-            .join("")}
-        </div>
+        <p class="note">Imported files become the live data in mockData.js (no seeded packets).</p>
       </div>
       <div class="selected">
         <h4>Selected Folders</h4>
@@ -70,13 +52,13 @@ export function renderImportModal({
                 <div>${escapeHtml(f.name)}</div>
                 <div class="note">${f.documentCount} document${f.documentCount === 1 ? "" : "s"} · ${f.employeeCount} employee${f.employeeCount === 1 ? "" : "s"}${
                     f.totalBytes != null ? ` · ${formatBytes(f.totalBytes)}` : ""
-                  }${f.source === "mock" ? " · mockData" : ""}</div>
+                  }</div>
               </span>
               <button class="trash" type="button" data-remove="${i}" aria-label="Remove">🗑</button>
             </div>`
                 )
                 .join("")
-            : `<div class="note">No folders selected yet.</div>`
+            : `<div class="note">No folders selected yet. Choose files or a folder to import.</div>`
         }
       </div>
       <div class="modal-actions">
@@ -100,13 +82,6 @@ export function renderImportModal({
   });
   root.querySelector("[data-close]").addEventListener("click", onClose);
   root.querySelector("#org-name").addEventListener("input", (e) => onOrgChange(e.target.value));
-
-  root.querySelectorAll("[data-mock]").forEach((btn) =>
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      onAddMockFolder(btn.getAttribute("data-mock"));
-    })
-  );
 
   root.querySelector("[data-pick-files]").addEventListener("click", (e) => {
     e.stopPropagation();
