@@ -1,26 +1,42 @@
-# I-9 Audit Agent (OnBlick wireframe)
+# I-9 Audit Agent (OnBlick wireframe implementation)
 
-Interactive UI matching the Figma flow **OnBlick I-9 Audit Agent**:
+Working AI-agent UI aligned to:
 
 https://www.figma.com/proto/XUiscxnfzfvDdsiK9iHcsy/I-9-AI-Aduit?node-id=22-20594&starting-point-node-id=22%3A20594
 
-## Screens
+ADO branch reference: `OnBlickMicroservices` / `I9_Audit_Agent`
 
-1. Empty state — **No Documents Found!** + **IMPORT I-9 DOCUMENTS**
-2. Import modal — org name, upload dropzone, selected folders, **SAVE & AUDIT LATER** / **INITIATE AUDIT**
-3. Audits list — Schinner LLC row + **INITIATE AUDIT**
-4. Confirm modal — **YES, CONFIRM**
-5. View audit — employee error badges
-6. **AI Assist Agent** — audit notes editor + OnBlick Audit Assistant chat / **Start Correction Recommendation**
+## Architecture
+
+```
+I-9-Assist-Agent/
+  index.html
+  css/styles.css
+  js/
+    main.js                 # app wiring / workflow
+    data/mockData.js        # fictional records (not wireframe samples)
+    state/store.js          # session state
+    services/
+      intent.js             # intent detection
+      promptBuilder.js      # prompt payload for future LLM API
+      aiAgent.js            # mock AI service + statuses
+    ui/                     # presentational screens
+    utils/dom.js
+```
+
+## Workflow
+
+1. Empty state → **Import I-9 Documents**
+2. Choose org + folders → **Save & Audit Later** or **Initiate Audit**
+3. Confirm initiate → employee results table
+4. Open employee → Audit Notes + **OnBlick Audit Assistant**
+5. Start correction / chat → Approve · Reject · Regenerate
 
 ## Run
 
 ```bash
-./START-I9-AUDIT.sh
-# or
 cd I-9-Assist-Agent && python3 -m http.server 8765
+# http://127.0.0.1:8765/
 ```
 
-Open: http://127.0.0.1:8765/
-
-Wireframe captures: `/opt/cursor/artifacts/figma/`
+Or from repo root: `./START-I9-AUDIT.sh`

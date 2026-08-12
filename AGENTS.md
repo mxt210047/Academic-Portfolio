@@ -9,7 +9,7 @@ This repository is **not a runnable software product**. It is a UT Dallas underg
 | Item | Role | How to use |
 |------|------|------------|
 | **I-9 Audit kit** (`I-9-Audit/`) | Internal Form I-9 compliance audit package (Audit ID `I9-2026-001`) | Follow `I-9-Audit/README.md` — freeze scope in `AUDIT_PLAN.md`, review with `CHECKLIST.md`, log in `FINDINGS_TRACKER.csv`, remediate with `CORRECTION_GUIDE.md`, close in `AUDIT_LOG.md` |
-| **I-9 Assist Audit Agent** (`I-9-Assist-Agent/`) | Local HTML assist UI over the kit | Serve with `python3 -m http.server 8765` or open `I-9-Assist-Agent/i9-assist-audit-agent.html` |
+| **I-9 Audit Agent** (`I-9-Assist-Agent/`) | OnBlick wireframe AI agent (modular UI + mock AI service) | `cd I-9-Assist-Agent && python3 -m http.server 8765` → http://127.0.0.1:8765/ |
 
 ### I-9 assist audit agent
 
