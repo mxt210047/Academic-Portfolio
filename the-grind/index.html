@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>THE GRIND — Jobs, Sports, Anime, Xbox</title>
+    <meta
+      name="description"
+      content="A student command center that tracks internships, Dallas sports, the anime watch queue, and Xbox sessions — all as one grind."
+    />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Teko:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <aside class="rail" id="rail">
+      <a class="brand" href="#dashboard" aria-label="THE GRIND home">
+        <span class="brand-mark">G</span>
+        <span class="brand-copy">
+          <strong>THE GRIND</strong>
+          <small>PLAYER HUB</small>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#dashboard" data-route="dashboard"><span>01</span>Lobby</a>
+        <a href="#jobs" data-route="jobs"><span>02</span>Missions</a>
+        <a href="#sports" data-route="sports"><span>03</span>Sideline</a>
+        <a href="#anime" data-route="anime"><span>04</span>Queue</a>
+        <a href="#xbox" data-route="xbox"><span>05</span>Library</a>
+      </nav>
+      <div class="rail-rank" id="rail-rank"></div>
+    </aside>
+
+    <div class="stage">
+      <header class="topbar">
+        <div class="ticker" id="ticker" aria-label="Live ticker"></div>
+        <div class="top-meta">
+          <time id="clock"></time>
+          <button class="ghost-btn" id="reset-demo" type="button" title="Reset local demo data">
+            Reset
+          </button>
+        </div>
+      </header>
+      <main id="view" class="view"></main>
+    </div>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <div id="modal-root"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
