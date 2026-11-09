@@ -1,0 +1,5 @@
+Model,Train Acc,Test Acc,Precision,Recall,F1,ROC-AUC
+Dummy Baseline,0.6334,0.6335,0.0,0.0,0.0,
+Decision Tree (depth=5),0.7206,0.6975,0.6107,0.4816,0.5385,0.7188
+Random Forest,0.812,0.702,0.6171,0.4925,0.5478,0.7326
+Logistic Regression,0.7156,0.704,0.6261,0.4775,0.5418,0.737
